@@ -1,3 +1,22 @@
+Bob Jenkins's Minimal Perfect Hashing is a little old, yet robust algorithm for
+generating minimal perfect hash functions in C form, with a pretty solid cross-
+platform implementaiton and small footprint.
+
+I think it should be interesting to anyone studying (minimal) perfect hashing,
+but it is also usable as is.
+
+Project aim:
+
+Update it to a modern form-factor (a git repo) for rise accessibility. Replace
+"standart.h" with real standart headers, merge Makefiles, write small man page, 
+etc (Maybe rewrite the text below to be less personal, to allow easier tweaks).
+
+Dedicated to Public Domain.
+
+Original code and article could be found [here].
+ [here]: http://burtleburtle.net/bob/hash/perfect.html
+
+
 ## Minimal Perfect Hashing
 
 **Perfect hashing** guarantees that you get no collisions at all. It is 
