@@ -6,10 +6,10 @@
 #define PHASH
 
 extern ub1 tab[];
-#define PHASHLEN 0x8000  /* length of hash mapping table */
-#define PHASHNKEYS 61406  /* How many keys were hashed */
-#define PHASHRANGE 65536  /* Range any input might map to */
-#define PHASHSALT 0x78dde6e4 /* internal, initialize normal hash */
+#define PHASHLEN 0x2  /* length of hash mapping table */
+#define PHASHNKEYS 2  /* How many keys were hashed */
+#define PHASHRANGE 2  /* Range any input might map to */
+#define PHASHSALT 0x5a0541b9 /* internal, initialize normal hash */
 
 ub4 phash();
 
