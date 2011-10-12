@@ -21,20 +21,20 @@ samperf.txt"_.
 ### Usage
 
 There are options (taken by both perfect and the sanity test):
-  
-    
+
          perfect [-{NnIiHhDdAa}{MmPp}{FfSs}] < key.txt 
-    
 
 Only one of NnIiHhAa may be specified. N is the default. These say how to
 interpret the keys. The input is always a list of keys, one key per line.
 
 N,n 
+
 >	Normal mode, key is any string string (default). About 42+6n
 	instructions for an n-byte key, or a 119+7n instructions if there are more
 	than 218 keys. 
 
 I,i
+
 >  	Inline, key is any string, user will do initial hash. The initial hash must
 	be
 
@@ -47,6 +47,7 @@ I,i
 	anyways, eliminating the loop overhead.
 
 H,h
+
 >	Keys are 4-byte integers in hex in this format:
     
 		  ffffffff
@@ -72,6 +73,7 @@ H,h
 	and the Solaris compiler.
 
 D,d
+
 >	Decimal. Same as H,h, but decimal instead of
 	hexidecimal. Did I mention this is good for switch statement optimization?
 	For 	example, the perfect hash for 1,16,256 is hash=((key+(key>>3))&3); 
@@ -82,6 +84,7 @@ D,d
 		  hash = key^tab[(key<<26)>>29];
 
 A,a
+
 >	An (A,B) pair is supplied in hex in this format:
 
 		  aaaaaaaa bbbbbbbb
@@ -101,17 +104,20 @@ A,a
 		-ap is a good option.
  
 B,b
+
 >	Same as A,a, except in decimal not hexidecimal.
 
 Only one of MmPp may be specified. M is the default. These say whether to do a
 minimal perfect hash or just a perfect hash.
 
 M,m
+
 >	Minimal perfect hash. Hash values will be in 0..nkeys-1, and every
 	possible hash value will have a matching key. This is the default. The size
 	of tab[] will be 3..8 bits per key.
 
 P,p
+
 >	Perfect hash. Hash values will be in 0..n-1, where n the smallest
 	power of 2 greater or equal to the number of keys. The size of tab[] will
 	be 1..4 bits per key.
@@ -119,6 +125,7 @@ P,p
 Only one of FfSs may be specified. S is the default.
 
 F,f
+
 >	Fast mode. Don't construct the transitive closure. Try to find an
 	initial hash within 10 tries, rather than within 2000 tries. (Transitive
 	closure is used anyways for minimal perfect hashes with tab[] of size 2048
@@ -127,6 +134,7 @@ F,f
 	being much bigger than it needs to be.
 
 S,s
+
 >	Slow mode. Take more time generating the perfect hash in hopes of making
 	tab[] as small as possible.
 
@@ -335,22 +343,22 @@ operation for every character of the key.
 
 [Bob Jenkins' Web Site][33]
 
-   [8]: blob/master/makeperf.txt
-   [9]: blob/master/standard.h
-   [10]: blob/master/recycle.h
-   [11]: blob/master/recycle.c
-   [12]: blob/master/lookupa.h
-   [13]: blob/master/lookupa.c
-   [14]: blob/master/perfect.h
-   [15]: blob/master/perfect.c
-   [16]: blob/master/perfhex.c
-   [17]: blob/master/samperf.txt
-   [18]: blob/master/samperf2.txt
-   [19]: blob/master/testperf.c
-   [20]: blob/master/makeptst.txt
-   [21]: blob/master/phash.h
-   [22]: blob/master/phash.c
-   [23]: http://www.cco.caltech.edu/cco/texinfo/libgplusplus/gperf_3.html
+   [8]: jenkins-perfect/blob/master/makeperf.txt
+   [9]: jenkins-perfect/blob/master/standard.h
+   [10]: jenkins-perfect/blob/master/recycle.h
+   [11]: jenkins-perfect/blob/master/recycle.c
+   [12]: jenkins-perfect/blob/master/lookupa.h
+   [13]: jenkins-perfect/blob/master/lookupa.c
+   [14]: jenkins-perfect/blob/master/perfect.h
+   [15]: jenkins-perfect/blob/master/perfect.c
+   [16]: jenkins-perfect/blob/master/perfhex.c
+   [17]: jenkins-perfect/blob/master/samperf.txt
+   [18]: jenkins-perfect/blob/master/samperf2.txt
+   [19]: jenkins-perfect/blob/master/testperf.c
+   [20]: jenkins-perfect/blob/master/makeptst.txt
+   [21]: jenkins-perfect/blob/master/phash.h
+   [22]: jenkins-perfect/blob/master/phash.c
+   [23]: http://www.gnu.org/software/gperf/
    [24]: http://metalab.unc.edu/pub/Linux/devel/lang/c/!INDEX.short.html
    [25]: http://www.dcc.uchile.cl/~oalonso/handbook/hbook.html
    [26]: http://www.dcc.uchile.cl/~oalonso/handbook/algs/3/3316.ins.c.html
