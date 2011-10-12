@@ -1,0 +1,442 @@
+<html>
+<head>
+<title>Perfect Hashing</title>
+<meta name="keywords" content="minimal perfect hash, perfect hash,
+hash, function, hashing, C, algorithm, code, unique, collision,
+minimal, switch, optimization">
+</head>
+<body bgcolor="#ffffff" text="#000000" link="#0000ff" 
+vlink="#00ff00" alink="#ff0000">
+
+<h2><center>Minimal Perfect Hashing</center></h2>
+
+<p><b>Perfect hashing</b> guarantees that you get no collisions at
+all.  It is possible when you know exactly what set of keys you are
+going to be hashing when you design your hash function.  It's popular
+for hashing keywords for compilers.  (They <i>ought</i> to be popular
+for <a href="#d">optimizing switch statements</a>.)  <b>Minimal
+perfect hashing</b> guarantees that n keys will map to 0..n-1 with no
+collisions at all.
+<ul>
+<li><a href="#code">C code and sanity test</a>
+<li><a href="#usage">Usage</a>
+<li><a href="#example">Examples and Performance</a>
+<li><a href="#algo">Algorithm used</a>
+<li><a href="#pointer">Pointers</a> to other perfect hash code
+<li><a href="#pearson">Minimal perfect hashing with Pearson hashes</a>
+</ul>
+
+<a name="code"><center>
+<h3>C code and a sanity test</h3>
+</center></a>
+
+<p>Here is my C code for minimal perfect hashing, plus a test case.
+<center><table>
+<tr><td><a href="../c/makeperf.txt">Makefile</a>
+    <td><a href="../c/standard.h">standard.h</a>
+<tr><td><a href="../c/recycle.h">recycle.h</a>
+    <td><a href="../c/recycle.c">recycle.c</a>
+<tr><td><a href="../c/lookupa.h">lookupa.h</a>
+    <td><a href="../c/lookupa.c">lookupa.c</a>
+<tr><td><a href="../c/perfect.h">perfect.h</a>
+    <td><a href="../c/perfect.c">perfect.c</a>
+<tr><td><a href="../c/perfhex.c">perfhex.c</a>
+    <td>
+<tr><td><a href="samperf.txt">sample input</a>
+    <td><a href="samperf2.txt">sample output</a>
+<tr><td><a href="../c/testperf.c">testperf.c</a>
+    <td><a href="../c/makeptst.txt">sanity test makefile</a>
+</table></center>
+
+<p>The generator is run like so, "<tt>perfect -nm &lt; samperf.txt</tt>",
+ and it produces the C files <a href="../c/phash.h">phash.h</a> and 
+<a href="../c/phash.c">phash.c</a>.  The sanity test program, which
+uses the generated hash to hash all the original keys, is run like so,
+"<tt>foo -nm &lt; samperf.txt</tt>".
+
+<a name="usage"><center>
+<h3>Usage</h3>
+</center></a>
+
+<p>There are options (taken by both perfect and the sanity test):
+<pre>
+     perfect [-{NnIiHhDdAa}{MmPp}{FfSs}] &lt; key.txt 
+</pre>
+
+<p>Only one of NnIiHhAa may be specified.  N is the default.  These
+say how to interpret the keys.  The input is always a list of keys,
+one key per line.
+<dl>
+<dt>N,n
+<dd>Normal mode, key is any string string (default).  About 42+6n
+instructions for an n-byte key, or a 119+7n instructions if there are
+more than 2<sup>18</sup> keys.
+
+<dt>I,i
+<dd>Inline, key is any string, user will do initial hash.  The initial
+hash must be
+<pre>
+    hash = PHASHSALT;
+    for (i=0; i&lt;keylength; ++i) {
+      hash = (hash ^ key[i]) + ((hash&lt;&lt;26)+(hash&gt;&gt;6));
+    }
+</pre>
+Note that this can be inlined in any user loop that walks through the
+key anyways, eliminating the loop overhead.
+
+<dt>H,h
+<dd>Keys are 4-byte integers in hex in this format:
+<pre>
+      ffffffff
+</pre>
+In the worst case for up to 8192 keys whose values are all less than
+0x10000, the perfect hash is this:
+<pre>
+      hash = key+CONSTANT;
+      hash += (hash&gt;&gt;8);
+      hash ^= (hash&lt;&lt;4);
+      b = (hash &gt;&gt; j) & 7;
+      a = (hash + (hash &lt;&lt; k)) &gt;&gt; 29;
+      return a^tab[b];
+</pre>
+...and it's usually faster than that.  Hashing 4 keys takes up to 8 
+instructions, three take up to 4, two take up to 2, and for one the 
+hash is always "return 0".
+
+<p>Switch statements could be compiled as a perfect hash 
+(<tt>perfect -hp &lt; hex.txt</tt>),
+followed by a jump into a spring table by hash value, followed by a
+test of the case (since non-case values could have the same hash as a
+case value). That would be faster than the binary tree of branches
+currently used by gcc and the Solaris compiler.
+
+<dt><a name="d">D,d</a>
+<dd>Decimal.  Same as H,h, but decimal instead of hexidecimal.  Did I
+mention this is good for switch statement optimization?  For example,
+the perfect hash for <tt>1,16,256</tt> is 
+<tt>hash=((key+(key&gt;&gt;3))&3);</tt> and the perfect hash for
+<tt>1,2,3,4,5,6,7,8</tt> is <tt>hash=(key&7);</tt> and the perfect
+hash for <tt>1,4,9,16,25,36,49</tt> is
+<pre>
+  ub1 tab[] = {0,7,0,2,3,0,3,0};
+  hash = key^tab[(key<<26)>>29];
+</pre>
+
+<dt>A,a
+<dd>An (A,B) pair is supplied in hex in this format:
+<pre>
+      aaaaaaaa bbbbbbbb
+</pre>
+This mode does nothing but find the values of <tt>tab[]</tt>.
+If n is the number of keys and 2<sup>i</sup> &lt;= n &lt;=
+2<sup>i+1</sup>, then <tt>A</tt> should be less than 2<sup>i</sup> if
+the hash is minimal, otherwise less than 2<sup>i+1</sup>.  The hash is
+<tt>A^tab[B]</tt>, or <tt>A^scramble[tab[B]]</tt> if there is a B
+bigger than 2048.  The user must figure out how to generate (A,B).
+Unlike the other modes, the generator cannot rechoose (A,B) if it has
+problems, so the user must be prepared to deal with failure in this
+mode.  Unlike other modes, this mode will attempt to increase smax.
+
+<p>Parse tables for production rules, or any static sparse tables,
+could be efficiently compacted using this option.  Make B the row
+and A the column.  For parse tables, B would be the state and A would 
+be the ID for the next token.  -ap is a good option.
+
+<dt>B,b
+<dd>Same as A,a, except in decimal not hexidecimal.
+</dl>
+
+
+<p>Only one of MmPp may be specified.  M is the default.  These say
+whether to do a minimal perfect hash or just a perfect hash.
+<dl>
+<dt>M,m
+<dd>Minimal perfect hash.  Hash values will be in 0..nkeys-1, and
+every possible hash value will have a matching key.  This is the
+default.  The size of tab[] will be 3..8 bits per key.
+<dt>P,p
+<dd>Perfect hash.  Hash values will be in 0..n-1, where n the smallest
+power of 2 greater or equal to the number of keys.  The size of tab[]
+will be 1..4 bits per key.
+</dl>
+
+<p>Only one of FfSs may be specified.  S is the default.
+<dl>
+<dt>F,f
+<dd>Fast mode.  Don't construct the transitive closure.  Try to find
+an initial hash within 10 tries, rather than within 2000 tries.
+(Transitive closure is used anyways for minimal perfect hashes with
+tab[] of size 2048 or bigger because you just can't succeed without
+it.)  This will generate a perfect hash in linear time in the number
+of keys.  It will result in tab[] being much bigger than it needs to be.
+
+<dt>S,s
+<dd>Slow mode.  Take more time generating the perfect hash in hopes of
+making tab[] as small as possible.
+</dl>
+
+<a name="example"><center>
+<h3>Examples and Performance</h3>
+</center></a>
+
+<p>Timings were done on a 500mhz Pentium with 128meg RAM, and it's
+actually the number of cursor blinks not seconds.  ispell.txt
+is a list of English words that comes with EMACS.  mill.txt was a
+million keys where each key was three random 4-byte numbers in hex.
+tab[] is always an array of 1-byte values.  Normally I use a 166mhz
+machine with 32meg RAM, but a million keys died thrashing virtual
+memory on that.
+
+<p><center><table>
+<tr>
+<th>Usage 
+<th>number of keys 
+<th>Generation time (in seconds)
+<th>tab[] size
+<th>minimal?
+<tr>
+<td>perfect &lt; samperf.txt
+<td>58
+<td>0
+<td>64
+<td>yes
+<tr>
+<td>perfect -p &lt; samperf.txt
+<td>58
+<td>0
+<td>32
+<td>no
+<tr>
+<td>perfect &lt; ispell.txt
+<td>38470
+<td>11
+<td>16384
+<td>yes
+<tr>
+<td>perfect -p &lt; ispell.txt
+<td>38470
+<td>4
+<td>4096
+<td>no
+<tr>
+<td>perfect &lt; mill.txt
+<td>1000000
+<td>65
+<td>524288
+<td>yes
+<tr>
+<td>perfect -p &lt; mill.txt
+<td>1000000
+<td>100
+<td>524288
+<td>no
+</table></center>
+
+<a name="algo"><center>
+<h3>Algorithm</h3>
+</center></a>
+
+<h4>Initial hash returns (A,B), final hash is A^tab[B]</h4>
+
+<p>The perfect hash algorithm I use isn't a <a href="#pearson">Pearson
+hash</a>.  My perfect hash algorithm uses an initial hash to find a
+pair (A,B) for each keyword, then it generates a mapping table
+<tt>tab[]</tt> so that <tt>A^tab[B]</tt> (or
+<tt>A^scramble[tab[B]]</tt>) is unique for each
+keyword. <tt>tab[]</tt> is always a power of two. When tab[] has 4096
+or more entries, <tt>scramble[]</tt> is used and tab[] holds 1-byte
+values.  <tt>scramble[]</tt> is always 256 values (2-byte or 4-byte
+values depending on the size of hash values).
+
+<p>I found the idea of generating (A,B) from the keys in
+"Practical minimal perfect hash functions for large databases", Fox,
+Heath, Chen, and Daoud, Communications of the ACM, January 1992.
+(Dean Inada pointed me to that article shortly after I put code for a
+Pearson-style hash on my site.)
+
+<p>Any specific hash function may or may not produce a distinct (A,B)
+for each key.  There is some probability of success.  If the hash
+is good, the probability of success depends only on the size of the
+ranges of A and B compared to the number of keys.  So the initial hash
+for this algorithm actually must be a set of independent hash
+functions ("universal hashing").  Different hashes are tried from the
+set until one is found which produces distinct (A,B).  A probability
+of success of .5 is easy to achieve, but smaller ranges for B (which
+imply smaller probabilities of success) require a smaller tab[].
+
+<p>The different input modes use different initial hashes.  Normal
+mode uses my general hash <a href="../c/lookupa.c">lookup()</a> (42+6n
+instructions) (or <a href="../c/lookupa.c">checksum()</a> if there are
+more than 2<sup>18</sup> keys).  Inline mode requires the user to compute
+the initial hash themself, preferably as part of tokenizing the key in
+the first place (to eliminate the loop overhead and the cost of
+fetching the characters in the key).  Hex mode, which takes
+integer keys, does a brute force search to find how little mixing it
+can get away with.  AB mode gets the (A,B) pairs from the user, giving
+the user complete control over initial mixing.
+
+<p>The final hash is always <tt>A^tab[B]</tt> or
+<tt>A^scramble[tab[B]]</tt>.  <tt>scramble[]</tt> is initialized with
+random distinct values up to <tt>smax</tt>, the smallest power of two
+greater or equal to the number of keys.  The trick is to fill in
+<tt>tab[]</tt>.  Multiple keys may share the same <tt>B</tt>, so share
+the same tab[B].  The elements of tab[] are handled in descending
+order by the number of keys.
+
+<h4>Spanning Trees and Augmenting Paths</h4>
+
+<p>Finding values for tab[] such that A^tab[B] causes no collisions is
+known as the "sparse matrix compression problem", which is NP
+complete.  ("Computers and Intractability, A Guide to the Theory of
+NP-Completeness", Garey & Johnson, 1979)  Like most NP complete
+problems, there are fast heuristics for getting reasonable (but not
+optimal) solutions.  The heuristic I use involves spanning trees.
+
+<p>Spanning trees and augmenting paths (with elements of
+<tt>tab[]</tt> as nodes) are used to choose values for tab[b] and to
+rearrange existing values in tab[] to make room.  The element being
+added is the root of the tree.
+
+<p>Spanning trees imply a graph with nodes and edges, right?  The
+nodes are the elements of tab[].  Each element has a list of keys
+(tab[x] has all the keys with B=x), and needs to be assigned a value
+(the value for tab[x] when A^tab[B] is computed).  Keys are added to
+the perfect hash one element of tab[] at a time.  Each element may
+contain many keys.  For each possible value of tab[x], we see what
+that value causes the keys to collide with.  If the keys collide with
+keys in only one other element, that defines an edge from the other
+element pointing back to this element.  If the keys collide with
+nothing, that's a leaf, and the augmenting path follows that leaf
+along the nodes back to the root.
+
+<p>If an augmenting path is found and all the nodes in it have one key
+apiece, it is guaranteed the augmenting path can be applied.  Changing
+the leaf makes room for its parent's key, and so forth, until room is made
+for the one key being mapped.  (If the element to be mapped has only
+one key, and there is no restriction on the values of tab[],
+augmenting paths aren't needed.  A value for tab[B] can be chosen that
+maps that key directly to an open hash value.)  
+
+<p>If the augmenting path contains nodes with multiple keys, there is
+no guarantee the agumenting path can be applied.  Moving the keys for
+the leaf will make room for the keys of the parent that collided with
+that leaf originally, but there is no guarantee that the other keys in
+the leaf and the parent won't apply.  Empirically, this happens a
+around once per ten minimal perfect hashes generated.  There must be code
+to handle rolling back an augmenting path that runs into this, but
+it's not worthwhile trying to avoid the problem.
+
+<p>A possible strategy for finding a perfect hash is to accept the
+first value tried for tab[x] that causes tab[x]'s keys to collide with
+keys in zero other already-mapped elements in tab[].  ("Collide" means
+this some key in this element has the same hash value as some key in
+the other element.)  This strategy is called "first fit descending"
+(recall that elements are tried in descending order of number of keys).
+
+<p>A second, more sophisticated, strategy would allow the keys of
+tab[x] to collide with zero or one other elements in tab[].  If it
+collides with one other element, the problem changes to mapping that
+one other element.  There is no upper bound on the running time of
+this strategy.
+
+<p>The use of spanning trees and augmenting paths is almost as
+powerful as the second strategy, and it is guaranteed to terminate
+within O(nn) time (per element mapped).  Is it faster or better on 
+average?  I don't know.  I would guess it is.  Spanning trees can
+ignore already-explored nodes, while the random jumping method
+doesn't.
+
+<p>How much do spanning trees help compared to first fit descending?
+First consider the case where tab[] values can be anything.  Minimal
+perfect hashes need tab[] 31% bigger and perfect hashes need tab[] 4%
+bigger (on average) if multikey spanning trees aren't used.  Next the
+case where tab[] values are one of 256 values.  Minimal perfect hashes
+cannot be found at all, and perfect hashes need tab[] 15% bigger on
+average.  
+
+<p>It turns out that restricting the size of A in A^tab[B] is also a
+good way to limit the size of tab[].
+
+<center><a name="pointer">
+<h3>Pointers to Non-Bob perfect hashing</h3>
+</a></center>
+
+<p>Pointers to other implementations of perfect hashing
+<ol>
+<li><a href =
+"http://www.cco.caltech.edu/cco/texinfo/libgplusplus/gperf_3.html">
+gperf</a> is a perfect hashing package available under the GNU
+license.  The hash it generates is usually slightly faster than mine, 
+but it can't handle anagrams (like if and fi, or tar and art), and it 
+can't handle more than a couple hundred keys.
+<li><a href =
+"http://metalab.unc.edu/pub/Linux/devel/lang/c/!INDEX.short.html">
+mph (Minimal Perfect Hash)</a> can do perfect hashes, minimal perfect
+hashes, and order preserving minimal perfect hashes.  I haven't looked
+into it much yet, but it's promising.  It's based on a paper by
+Majewski, who is an expert in academia on the current state of the art
+of perfect hashes.  Its doc starts out "I wrote this for fun...", so
+download it and see what you can get it to do!  Perfect hashing IS fun.
+<li>Gonnet/Baeza-Yates of Chile have a <a href =
+"http://www.dcc.uchile.cl/~oalonso/handbook/hbook.html"> handbook on
+the web</a> with a <a href =
+"http://www.dcc.uchile.cl/~oalonso/handbook/algs/3/3316.ins.c.html">
+section on perfect hashing</a>.  I haven't tested this.
+
+</ol>
+
+<a name="pearson"><h3>Minimal perfect hashing with Pearson hashes</h3></a>
+
+<p>A minimal perfect Pearson hash looks like this:
+<pre>
+  hash = 0;
+  for (i=0; i&lt;len; ++i)
+    hash = tab[(hash+key[i])%n];
+</pre>
+It is almost always faster than my perfect hash in -i mode, by 0..3
+cycles per character (mostly depending on whether your machine has a
+barrelshift instruction).
+
+<p>A <i>minimal perfect hash</i> maps n keys to a range of n elements
+with no collisions.   A <i>perfect hash</i> maps n keys to a range of
+m elements, m&gt;=n, with no collisions.  If perfect hashing is
+implemented as a special table for <a href="pearson.html">Pearson's
+hash</a> (the usual implementation), minimal perfect hashing is
+not always possible, with probabilities given in the table below.  
+For example the two binary strings {(0,1),(1,0)}
+are not perfectly hashed by the table [0,1] or the table [1,0], and
+those are all the choices available.  For sets of 8 or more elements,
+the chances are negligible that no perfect hash exists, specifically
+(1-n!/n<sup>n</sup>)<sup>n!</sup>.  Even if they do exist, finding one
+may be an intractable problem.
+
+<p><center><table border=1>
+<tr><th>Number of elements<th>Chance that no mimimal perfect hash exists
+<tr><td>2<td>.25
+<tr><td>3<td>.2213773
+<tr><td>4<td>.0941787
+<tr><td>5<td>.0091061
+<tr><td>6<td>.0000137
+<tr><td>7<td>.0000000000000003
+</table></center>
+
+<p>Although Pearson-style minimal perfect hashings do not always
+exist, minimal perfect hashes always exist.  For example, the hash which
+stores a sorted table of all keywords, and the location of each
+keyword is its hash, is a minimal perfect hash of n keywords into
+0..n-1.  This sorted-table minimal perfect hash might not even be
+slower than Pearson perfect hashing, since the sorted-table hash must
+do a comparison per bit of key, while the Pearson hash must do an
+operation for every character of the key.
+
+<hr line=1>
+
+<p><a href="http://sun.iinf.polsl.gliwice.pl/~zjc/">Zbigniew J. Czech</a>,
+an academic researcher of perfect hash functions
+<br><a href="../rand/isaac.html">ISAAC and RC4, fast stream ciphers</a>
+<br><a href="index.html#lookup">Hash functions for table lookup</a>
+<br><a href="../scout/index.html">Ye Olde Catalogue of Boy Scout Skits</a>
+<br><a href="../math/jenny.html">jenny, generate cross-functional tests</a>
+<br><a href="../index.html">Table of Contents</a>
+</body>
+</html>
