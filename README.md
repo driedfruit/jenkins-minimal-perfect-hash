@@ -7,7 +7,7 @@ but it is also usable as is.
 
 Project aim:
 
-Update it to a modern form-factor (a git repo) for rise accessibility. Replace
+Update it to a modern form-factor (a git repo) to rise accessibility. Replace
 "standart.h" with real standart headers, merge Makefiles, write small man page, 
 etc (Maybe rewrite the text below to be less personal, to allow easier tweaks).
 
@@ -110,7 +110,7 @@ A,a
 
 >	This mode does nothing but find the values of tab[]. If n is the number of
 	keys and 2i <= n <= 2i+1, then A should be less than 2i if the hash is
-	minimal, otherwise less than 2i+1. The hash is A^tab[B], or A^scramble[tab[B]]
+	minimal, otherwise less than 2i+1. The hash is A^tab[B], or A^scramble[ tab[B] ]
 	if there is a B bigger than 2048. The user must figure out how to generate
 	(A,B). Unlike the other modes, the generator cannot rechoose (A,B) if it has
 	problems, so the user must be prepared to deal with failure in this mode.
