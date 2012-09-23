@@ -8,26 +8,34 @@ Source is http://burtleburtle.net/bob/c/perfect.h
 ------------------------------------------------------------------------------
 */
 
-#ifndef STANDARD
-#include "standard.h"
-#endif
-
 #ifndef PERFECT
 #define PERFECT
 
+#include "stdint.h" /* For standart types */
+
 #define MAXKEYLEN 30                              /* maximum length of a key */
 #define USE_SCRAMBLE  4096           /* use scramble if blen >= USE_SCRAMBLE */
-#define SCRAMBLE_LEN ((ub4)1<<16)                    /* length of *scramble* */
+#define SCRAMBLE_LEN ((uint32_t)1<<16)                    /* length of *scramble* */
 #define RETRY_INITKEY 2048  /* number of times to try to find distinct (a,b) */
 #define RETRY_PERFECT 1     /* number of times to try to make a perfect hash */
 #define RETRY_HEX     200               /* RETRY_PERFECT when hex keys given */
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#define UINT32_BITS 32
+
 
 /* the generated code for the final hash, assumes initial hash is done */
 struct gencode
 {
   char **line;                       /* array of text lines, 80 bytes apiece */
   /*
-   * The code placed here must declare "ub4 rsl" 
+   * The code placed here must declare "uint32_t rsl" 
    * and assign it the value of the perfect hash using the function inputs.
    * Later code will be tacked on which returns rsl or manipulates it according
    * to the user directives.
@@ -39,13 +47,13 @@ struct gencode
    * tag.  A testcase named with that tag should also be found which tests
    * the generated code.
    */
-  ub4    len;                    /* number of lines available for final hash */
-  ub4    used;                         /* number of lines used by final hash */
+  uint32_t    len;                    /* number of lines available for final hash */
+  uint32_t    used;                         /* number of lines used by final hash */
 
-  ub4    lowbit;                          /* for HEX, lowest interesting bit */
-  ub4    highbit;                        /* for HEX, highest interesting bit */
-  ub4    diffbits;                         /* bits which differ for some key */
-  ub4    i,j,k,l,m,n,o;                      /* state machine used in hexn() */
+  uint32_t    lowbit;                          /* for HEX, lowest interesting bit */
+  uint32_t    highbit;                        /* for HEX, highest interesting bit */
+  uint32_t    diffbits;                         /* bits which differ for some key */
+  uint32_t    i,j,k,l,m,n,o;                      /* state machine used in hexn() */
 };
 typedef  struct gencode  gencode;
 
@@ -79,13 +87,13 @@ typedef  struct hashform  hashform;
 /* representation of a key */
 struct key
 {
-  ub1        *name_k;                                      /* the actual key */
-  ub4         len_k;                         /* the length of the actual key */
-  ub4         hash_k;                 /* the initial hash value for this key */
+  uint8_t         *name_k;                                      /* the actual key */
+  uint32_t         len_k;                         /* the length of the actual key */
+  uint32_t         hash_k;                 /* the initial hash value for this key */
   struct key *next_k;                                            /* next key */
 /* beyond this point is mapping-dependent */
-  ub4         a_k;                            /* a, of the key maps to (a,b) */
-  ub4         b_k;                            /* b, of the key maps to (a,b) */
+  uint32_t         a_k;                            /* a, of the key maps to (a,b) */
+  uint32_t         b_k;                            /* b, of the key maps to (a,b) */
   struct key *nextb_k;                               /* next key with this b */
 };
 typedef  struct key  key;
@@ -93,10 +101,10 @@ typedef  struct key  key;
 /* things indexed by b of original (a,b) pair */
 struct bstuff
 {
-  ub2  val_b;                                        /* hash=a^tabb[b].val_b */
+  uint16_t  val_b;                                        /* hash=a^tabb[b].val_b */
   key *list_b;                   /* tabb[i].list_b is list of keys with b==i */
-  ub4  listlen_b;                                        /* length of list_b */
-  ub4  water_b;           /* high watermark of who has visited this map node */
+  uint32_t  listlen_b;                                        /* length of list_b */
+  uint32_t  water_b;           /* high watermark of who has visited this map node */
 };
 typedef  struct bstuff  bstuff;
 
@@ -111,22 +119,22 @@ typedef  struct hstuff hstuff;
 struct qstuff
 {
   bstuff *b_q;                        /* b that currently occupies this hash */
-  ub4     parent_q;     /* queue position of parent that could use this hash */
-  ub2     newval_q;      /* what to change parent tab[b] to to use this hash */
-  ub2     oldval_q;                              /* original value of tab[b] */
+  uint32_t     parent_q;     /* queue position of parent that could use this hash */
+  uint16_t     newval_q;      /* what to change parent tab[b] to to use this hash */
+  uint16_t     oldval_q;                              /* original value of tab[b] */
 };
 typedef  struct qstuff  qstuff;
 
 /* return ceiling(log based 2 of x) */
-ub4 mylog2(/*_ ub4 x _*/);
+uint32_t mylog2(/*_ uint32_t x _*/);
 
 /* Given the keys, scramble[], and hash mode, find the perfect hash */
-void findhash(/*_ bstuff **tabb, ub4 *alen, ub4 *blen, ub4 *salt,
-		gencode *final, ub4 *scramble, ub4 smax, key *keys, ub4 nkeys, 
+void findhash(/*_ bstuff **tabb, uint32_t *alen, uint32_t *blen, uint32_t *salt,
+		gencode *final, uint32_t *scramble, uint32_t smax, key *keys, uint32_t nkeys, 
 		hashform *form _*/);
 
 /* private, but in a different file because it's excessively verbose */
-int inithex(/*_ key *keys, ub4 *alen, ub4 *blen, ub4 smax, ub4 nkeys, 
-	      ub4 salt, gencode *final, gencode *form _*/);
+int inithex(/*_ key *keys, uint32_t *alen, uint32_t *blen, uint32_t smax, uint32_t nkeys, 
+	      uint32_t salt, gencode *final, gencode *form _*/);
 
 #endif /* PERFECT */
