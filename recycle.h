@@ -13,12 +13,10 @@ This also decreases memory fragmentation, and freeing all structures
 --------------------------------------------------------------------
 */
 
-#ifndef STANDARD
-#include "standard.h"
-#endif
-
 #ifndef RECYCLE
 #define RECYCLE
+
+#include "stddef.h" /* for size_t */
 
 #define RESTART    0
 #define REMAX      32000
@@ -35,7 +33,7 @@ struct reroot
    struct recycle *trash;    /* list of deleted items */
    size_t          size;     /* size of an item */
    size_t          logsize;  /* log_2 of number of items in a block */
-   word            numleft;  /* number of bytes left in this block */
+   int             numleft;  /* number of bytes left in this block */
 };
 typedef  struct reroot  reroot;
 
@@ -61,5 +59,9 @@ char    *renewx(/*_ struct reroot *r _*/);
 /* malloc, but complain to stderr and exit program if no joy */
 /* use plain free() to free memory allocated by remalloc() */
 char    *remalloc(/*_ size_t len, char *purpose _*/);
+
+#ifndef align
+# define align(a) (((uint32_t)a+(sizeof(void *)-1))&(~(sizeof(void *)-1)))
+#endif /* align */
 
 #endif  /* RECYCLE */
