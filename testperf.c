@@ -11,6 +11,7 @@ By Bob Jenkins.  Public Domain.
 #include "phash.h"
 #endif
 
+#include "inttypes.h" /* for PRI/SCN format specifiers */
 #include "stdio.h"  /* for std* streams, fprintf() */
 #include "string.h" /* for strlen() */
 #include "stdlib.h" /* for EXIT_SUCCESS */
@@ -91,7 +92,7 @@ hashform *form;
 
   /* read in the list of keywords */
   getkeys(&keys, &nkeys, textroot, keyroot);
-  printf("Read in %ld keys\n",nkeys);
+  printf("Read in %" PRId32 " keys\n", nkeys);
 
   for (mykey=keys; mykey; mykey=mykey->knext)
   {
@@ -113,19 +114,19 @@ hashform *form;
       hash = phash(hash);
       break;
     case HEX_HM:
-      sscanf(mykey->kname, "%lx ", &hash);
+      sscanf(mykey->kname, "%" SCNx32 " ", &hash);
       hash = phash(hash);
       break;
     case DECIMAL_HM:
-      sscanf(mykey->kname, "%ld ", &hash);
+      sscanf(mykey->kname, "%" SCNd32 " ", &hash);
       hash = phash(hash);
       break;
     case AB_HM:
-      sscanf(mykey->kname, "%lx %lx ", &a, &b);
+      sscanf(mykey->kname, "%" SCNx32 " %" SCNx32 " ", &a, &b);
       hash = phash(a,b);
       break;
     case ABDEC_HM:
-      sscanf(mykey->kname, "%ld %ld ", &a, &b);
+      sscanf(mykey->kname, "%" SCNd32 " %" SCNd32 " ", &a, &b);
       hash = phash(a,b);
       break;
     }
