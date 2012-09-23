@@ -5,7 +5,7 @@ By Bob Jenkins.  Public Domain.
 ----------------------------------------------------------------------------
 */
 #include "recycle.h"
-#include "phash.h"
+#include "test_hash.h"
 
 #include "inttypes.h" /* for PRI/SCN format specifiers */
 #include "stdio.h"    /* for std* streams, fprintf() */
@@ -99,31 +99,31 @@ hashform *form;
     switch(form->mode)
     {
     case NORMAL_HM:
-      hash = phash(mykey->kname, mykey->klen);  
+      hash = mph_test_s(mykey->kname, mykey->klen);  
       break;
     case INLINE_HM:
-      hash = PHASHSALT;
+      hash = MPH_TEST_SALT;
       for (i=0; i<mykey->klen; ++i)
       {
 	hash = (mykey->kname[i] ^ hash) + ((hash<<26)+(hash>>6));
       }
-      hash = phash(hash);
+      hash = mph_test_s(hash);
       break;
     case HEX_HM:
       sscanf(mykey->kname, "%" SCNx32 " ", &hash);
-      hash = phash(hash);
+      hash = mph_test_s(hash);
       break;
     case DECIMAL_HM:
       sscanf(mykey->kname, "%" SCNd32 " ", &hash);
-      hash = phash(hash);
+      hash = mph_test_s(hash);
       break;
     case AB_HM:
       sscanf(mykey->kname, "%" SCNx32 " %" SCNx32 " ", &a, &b);
-      hash = phash(a,b);
+      hash = mph_test_s(a,b);
       break;
     case ABDEC_HM:
       sscanf(mykey->kname, "%" SCNd32 " %" SCNd32 " ", &a, &b);
-      hash = phash(a,b);
+      hash = mph_test_s(a,b);
       break;
     }
     printf("%8d  %.*s\n", hash, mykey->klen, mykey->kname);

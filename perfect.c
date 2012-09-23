@@ -191,13 +191,14 @@ int       complete;        /* TRUE means to complete init despite collisions */
 
 
 /* Do the initial hash for normal mode (use lookup and checksum) */
-static void initnorm(keys, alen, blen, smax, salt, final)
+static void initnorm(keys, alen, blen, smax, salt, final, form)
 key      *keys;                                          /* list of all keys */
 uint32_t       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
 uint32_t       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
 uint32_t       smax;                   /* maximum range of computable hash values */
 uint32_t       salt;                     /* used to initialize the hash function */
 gencode  *final;                          /* output, code for the final hash */
+hashform *form;
 {
   key *mykey;
   if (mylog2(alen)+mylog2(blen) > UINT32_BITS)
@@ -243,17 +244,17 @@ gencode  *final;                          /* output, code for the final hash */
     }
     else if (mylog2(alen) == 0)
     {
-      sprintf(final->line[1], "  rsl = tab[val&0x%x];\n", blen-1);
+      sprintf(final->line[1], "  rsl = mph_%s_tab[val&0x%x];\n", form->low_name, blen-1);
     }
     else if (blen < USE_SCRAMBLE)
     {
-      sprintf(final->line[1], "  rsl = ((val>>%" PRId32 ")^tab[val&0x%x]);\n",
-	      UINT32_BITS-mylog2(alen), blen-1);
+      sprintf(final->line[1], "  rsl = ((val>>%" PRId32 ") ^ mph_%s_tab[val&0x%x]);\n",
+	      UINT32_BITS-mylog2(alen), form->low_name, blen-1);
     }
     else
     {
-      sprintf(final->line[1], "  rsl = ((val>>%" PRId32 ")^scramble[tab[val&0x%x]]);\n",
-	      UINT32_BITS-mylog2(alen), blen-1);
+      sprintf(final->line[1], "  rsl = ((val>>%" PRId32 ")^scramble[mph_%s_tab[val&0x%x]]);\n",
+	      UINT32_BITS-mylog2(alen), form->low_name, blen-1);
     }
   }
 }
@@ -261,13 +262,14 @@ gencode  *final;                          /* output, code for the final hash */
 
 
 /* Do initial hash for inline mode */
-static void initinl(keys, alen, blen, smax, salt, final)
+static void initinl(keys, alen, blen, smax, salt, final, form)
 key      *keys;                                          /* list of all keys */
 uint32_t       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
 uint32_t       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
 uint32_t       smax;                           /* range of computable hash values */
 uint32_t       salt;                     /* used to initialize the hash function */
 gencode  *final;                            /* generated code for final hash */
+hashform *form;                             /* user-provided options */
 {
   key *mykey;
   uint32_t  amask = alen-1;
@@ -294,13 +296,13 @@ gencode  *final;                            /* generated code for final hash */
   }
   else if (blen < USE_SCRAMBLE)
   {
-    sprintf(final->line[0], "  uint32_t rsl = ((val & 0x%" PRIx32 ") ^ tab[val >> %" PRIx32 "]);\n",
-	    amask, UINT32_BITS-blog);
+    sprintf(final->line[0], "  uint32_t rsl = ((val & 0x%" PRIx32 ") ^ mph_%s_tab[val >> %" PRIx32 "]);\n",
+	    amask, form->low_name, UINT32_BITS-blog);
   }
   else
   {
-    sprintf(final->line[0], "  uint32_t rsl = ((val & 0x%" PRIx32 ") ^ scramble[tab[val >> %" PRIx32 "]]);\n",
-	    amask, UINT32_BITS-blog);
+    sprintf(final->line[0], "  uint32_t rsl = ((val & 0x%" PRIx32 ") ^ scramble[mph_%s_tab[val >> %" PRIx32 "]]);\n",
+	    amask, form->low_name, UINT32_BITS-blog);
   }
 }
 
@@ -329,10 +331,10 @@ gencode  *final;                                      /* code for final hash */
   switch(form->mode)
   {
   case NORMAL_HM:
-    initnorm(keys, alen, blen, smax, salt, final);
+    initnorm(keys, alen, blen, smax, salt, final, form);
     break;
   case INLINE_HM:
-    initinl(keys, alen, blen, smax, salt, final);
+    initinl(keys, alen, blen, smax, salt, final, form);
     break;
   case HEX_HM:
   case DECIMAL_HM:
@@ -1002,27 +1004,32 @@ hashform  *form;                                          /* user directives */
 }
 
 /* make the .h file */
-static void make_h(blen, smax, nkeys, salt)
+static void make_h(blen, smax, nkeys, salt, form)
 uint32_t  blen;
 uint32_t  smax;
 uint32_t  nkeys;
 uint32_t  salt;
+hashform *form;
 {
   FILE *f;
-  f = fopen("phash.h", "w");
+  char *filename;
+  filename = remalloc(sizeof(char) * (strlen(form->low_name) + strlen("_hash.h")), ".h filename");
+  sprintf(filename, "%s_hash.h", form->low_name);
+  f = fopen(filename, "w");
+  free(filename);
   fprintf(f, "/* Perfect hash definitions */\n");
-  fprintf(f, "#ifndef PHASH\n");
-  fprintf(f, "#define PHASH\n");
+  fprintf(f, "#ifndef MPH_%s\n", form->high_name);
+  fprintf(f, "#define MPH_%s\n", form->high_name);
   fprintf(f, "\n");  
   fprintf(f, "#include \"stdint.h\"\n");
   fprintf(f, "\n");
   if (blen > 0)
   {
     if (smax <= UINT8_MAX+1 || blen >= USE_SCRAMBLE)
-      fprintf(f, "extern uint8_t tab[];\n");
+      fprintf(f, "extern uint8_t mph_%s_tab[];\n", form->low_name);
     else
     {
-      fprintf(f, "extern uint16_t tab[];\n");
+      fprintf(f, "extern uint16_t mph_%s_tab[];\n", form->low_name);
       if (blen >= USE_SCRAMBLE)
       {
 	if (smax <= UINT16_MAX+1)
@@ -1031,19 +1038,21 @@ uint32_t  salt;
 	  fprintf(f, "extern uint32_t scramble[];\n");
       }
     }
-    fprintf(f, "#define PHASHLEN 0x%" PRIx32 "  /* length of hash mapping table */\n",
-	    blen);
+    fprintf(f, "#define MPH_%s_LEN 0x%" PRIx32 "  /* length of hash mapping table */\n",
+	    form->high_name, blen);
   }
-  fprintf(f, "#define PHASHNKEYS %" PRId32 "  /* How many keys were hashed */\n",
-          nkeys);
-  fprintf(f, "#define PHASHRANGE %" PRId32 "  /* Range any input might map to */\n",
-          smax);
-  fprintf(f, "#define PHASHSALT 0x%.8" PRIx32 " /* internal, initialize normal hash */\n",
-          salt*0x9e3779b9);
+  fprintf(f, "#define MPH_%s_NKEYS %" PRId32 "  /* How many keys were hashed */\n",
+          form->high_name, nkeys);
+  fprintf(f, "#define MPH_%s_RANGE %" PRId32 "  /* Range any input might map to */\n",
+          form->high_name, smax);
+  fprintf(f, "#define MPH_%s_SALT 0x%.8" PRIx32 " /* internal, initialize normal hash */\n",
+          form->high_name, salt*0x9e3779b9);
   fprintf(f, "\n");
-  fprintf(f, "uint32_t phash();\n");
+  fprintf(f, "uint32_t mph_%s_s();\n", form->low_name);
   fprintf(f, "\n");
-  fprintf(f, "#endif  /* PHASH */\n");
+  fprintf(f, "#define mph_%s(key) mph_%s_s((key), strlen((key)))\n", form->low_name, form->low_name);
+  fprintf(f, "\n");
+  fprintf(f, "#endif  /* MPH_%s */\n", form->high_name);
   fprintf(f, "\n");
   fclose(f);
 }
@@ -1059,9 +1068,13 @@ hashform *form;                                           /* user directives */
 {
   uint32_t   i;
   FILE *f;
-  f = fopen("phash.c", "w");
+  char *filename;
+  filename = remalloc(sizeof(char) * (strlen(form->low_name) + strlen("_hash.c")), ".c filename");
+  sprintf(filename, "%s_hash.c", form->low_name);
+  f = fopen(filename, "w");
+  free(filename);
   fprintf(f, "/* table for the mapping for the perfect hash */\n");
-  fprintf(f, "#include \"phash.h\"\n");
+  fprintf(f, "#include \"%s_hash.h\"\n", form->low_name);
   fprintf(f, "#include \"lookupa.h\"\n");
   fprintf(f, "\n");
   if (blen >= USE_SCRAMBLE)
@@ -1091,9 +1104,9 @@ hashform *form;                                           /* user directives */
     fprintf(f, "/* small adjustments to _a_ to make values distinct */\n");
 
     if (smax <= UINT8_MAX+1 || blen >= USE_SCRAMBLE)
-      fprintf(f, "uint8_t tab[] = {\n");
+      fprintf(f, "uint8_t mph_%s_tab[] = {\n", form->low_name);
     else
-      fprintf(f, "uint16_t tab[] = {\n");
+      fprintf(f, "uint16_t mph_%s_tab[] = {\n", form->low_name);
 
     if (blen < 16)
     {
@@ -1141,19 +1154,19 @@ hashform *form;                                           /* user directives */
   switch(form->mode)
   {
   case NORMAL_HM:
-    fprintf(f, "uint32_t phash(key, len)\n");
+    fprintf(f, "uint32_t mph_%s_s(key, len)\n", form->low_name);
     fprintf(f, "char *key;\n");
     fprintf(f, "int   len;\n");
     break;
   case INLINE_HM:
   case HEX_HM:
   case DECIMAL_HM:
-    fprintf(f, "uint32_t phash(val)\n");
+    fprintf(f, "uint32_t mph_%s_s(val)\n", form->low_name);
     fprintf(f, "uint32_t val;\n");
     break;
   case AB_HM:
   case ABDEC_HM:
-    fprintf(f, "uint32_t phash(a,b)\n");
+    fprintf(f, "uint32_t mph_%s_s(a,b)\n", form->low_name);
     fprintf(f, "uint32_t a;\n");
     fprintf(f, "uint32_t b;\n");
     break;
@@ -1209,14 +1222,16 @@ hashform *form;                                           /* user directives */
 	   scramble, &smax, keys, nkeys, form);
 
   /* generate the phash.h file */
-  make_h(blen, smax, nkeys, salt);
-  printf("Wrote phash.h\n");
+  make_h(blen, smax, nkeys, salt, form);
+  printf("Wrote %s_hash.h\n", form->low_name);
 
   /* generate the phash.c file */
   make_c(tab, smax, blen, scramble, &final, form);
-  printf("Wrote phash.c\n");
+  printf("Wrote %s_hash.c\n", form->low_name);
 
   /* clean up memory sources */
+  free(form->low_name);
+  free(form->high_name);
   refree(textroot);
   refree(keyroot);
   free((void *)tab);
@@ -1227,8 +1242,9 @@ hashform *form;                                           /* user directives */
 /* Describe how to use this utility */
 static void usage_error()
 {
-  printf("Usage: perfect [-{NnIiHhDdAaBb}{MmPp}{FfSs}] < key.txt \n");
+  printf("Usage: perfect [-{NnIiHhDdAaBb}{MmPp}{FfSs} 'ID'] < key.txt \n");
   printf("The input is a list of keys, one key per line.\n");
+  printf("ID is a custom string to be used in generated code suffixes/prefixes.\n");
   printf("Only one of NnIiHhDdAa and one of MmPp may be specified.\n");
   printf("  N,n: normal mode, key is any string string (default).\n");
   printf("  I,i: initial hash for ASCII char strings.\n");
@@ -1250,7 +1266,7 @@ static void usage_error()
   printf("*A* must be less than the total number of keys.\n");
   printf("  M,m: Minimal perfect hash.  Hash will be in 0..nkeys-1 (default)\n");
   printf("  P,p: Perfect hash.  Hash will be in 0..n-1, where n >= nkeys\n");
-  printf("and n is a power of 2.  Will probably use a smaller tab[].");
+  printf("and n is a power of 2.  Will probably use a smaller tab[].\n");
   printf("  F,f: Fast mode.  Generate the perfect hash fast.\n");
   printf("  S,s: Slow mode.  Spend time finding a good perfect hash.\n");
 
@@ -1267,8 +1283,12 @@ char **argv;
   int      mode_given = FALSE;
   int      minimal_given = FALSE;
   int      speed_given = FALSE;
+  int      name_given = FALSE;
+  char     *name = "perf";
+  int      name_len = 4;
   hashform form;
-  char    *c;
+  char     *c;
+  int      i;
 
   /* default behavior */
   form.mode = NORMAL_HM;
@@ -1281,11 +1301,17 @@ char **argv;
   {
   case 1:
     break;
+  case 3:
   case 2:
     if (argv[1][0] != '-')
     {
       usage_error();
       break;
+    }
+    if (argc == 3)
+    {
+      name_given = TRUE;
+      name = argv[2];
     }
     for (c = &argv[1][1]; *c != '\0'; ++c) switch(*c)
     {
@@ -1346,6 +1372,18 @@ char **argv;
     break;
   default:
     usage_error();
+  }
+
+  /* Generate identifying names */
+  name_len = strlen(name);
+  form.low_name = malloc(sizeof(char) * name_len);
+  form.high_name = malloc(sizeof(char) * name_len);
+  strcpy(form.low_name, name);
+  strcpy(form.high_name, name);
+  for (i = 0; i < name_len; i++) 
+  {
+  	form.low_name[i] = tolower(form.low_name[i]);
+  	form.high_name[i] = toupper(form.high_name[i]); 
   }
 
   /* Generate the [minimal] perfect hash */

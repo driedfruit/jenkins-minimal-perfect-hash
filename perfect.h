@@ -60,6 +60,8 @@ typedef  struct gencode  gencode;
 /* user directives: perfect hash? minimal perfect hash? input is an int? */
 struct hashform
 {
+  char *low_name;		    /* lowercase name for hash group (user-provided) */
+  char *high_name;          /* uppercase name for hash group (user-provided) */
   enum {
     NORMAL_HM,                                            /* key is a string */
     INLINE_HM,    /* user will do initial hash, we must choose salt for them */
