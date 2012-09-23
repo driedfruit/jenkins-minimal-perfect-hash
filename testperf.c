@@ -8,9 +8,9 @@ By Bob Jenkins.  Public Domain.
 #include "phash.h"
 
 #include "inttypes.h" /* for PRI/SCN format specifiers */
-#include "stdio.h"  /* for std* streams, fprintf() */
-#include "string.h" /* for strlen() */
-#include "stdlib.h" /* for EXIT_SUCCESS */
+#include "stdio.h"    /* for std* streams, fprintf() */
+#include "string.h"   /* for strlen() */
+#include "stdlib.h"   /* for EXIT_SUCCESS */
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -138,7 +138,7 @@ hashform *form;
 void usage_error()
 {
   printf("usage is the same as perfect (which see)\n");
-  exit(EXIT_SUCCESS);
+  exit(EXIT_FAILURE);
 }
 
 int main(argc, argv)
