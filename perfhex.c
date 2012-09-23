@@ -7,17 +7,24 @@ I hereby place this in the public domain.
 Source is http://burtleburtle.net/bob/c/perfhex.c
 
 The task of this file is to do the minimal amount of mixing needed to
-find distinct (a,b) for each key when each key is a distinct ub4.  That
+find distinct (a,b) for each key when each key is a distinct uint32_t.  That
 means trying all possible ways to mix starting with the fastest.  The
 output is those (a,b) pairs and code in the *final* structure for producing
 those pairs.
 ------------------------------------------------------------------------------
 */
 
-#include "standard.h"
 #include "lookupa.h"
 #include "recycle.h"
 #include "perfect.h"
+
+#include "stdlib.h"   /* for exit(), EXIT_FAILURE */
+#include "stdio.h"    /* for sprintf() */
+#include "inttypes.h" /* for PRI format specifiers */
+
+#define bis(target,mask)  ((target) |=  (mask))
+#define bic(target,mask)  ((target) &= ~(mask))
+#define bit(target,mask)  ((target) &   (mask))
 
 /* 
  * Find a perfect hash when there is only one key.  Zero instructions.
@@ -31,7 +38,7 @@ gencode *final;
   keys->a_k = 0;
   keys->b_k = 0;
   final->used = 1;
-  sprintf(final->line[0], "  ub4 rsl = 0;\n");                    /* h1a: 37 */
+  sprintf(final->line[0], "  uint32_t rsl = 0;\n");                    /* h1a: 37 */
 }
 
 
@@ -45,14 +52,14 @@ static void hextwo(keys, final)
 key     *keys;
 gencode *final;
 {
-  ub4 a = keys->hash_k;
-  ub4 b = keys->next_k->hash_k;
-  ub4 i;
+  uint32_t a = keys->hash_k;
+  uint32_t b = keys->next_k->hash_k;
+  uint32_t i;
   
   if (a == b)
   {
     printf("fatal error: duplicate keys\n");
-    exit(SUCCESS);
+    exit(EXIT_FAILURE);
   }
 
   final->used = 1;
@@ -60,17 +67,17 @@ gencode *final;
   /* one instruction */
   if ((a&1) != (b&1))
   {
-    sprintf(final->line[0], "  ub4 rsl = (val & 1);\n");         /* h2a: 3,4 */
+    sprintf(final->line[0], "  uint32_t rsl = (val & 1);\n");         /* h2a: 3,4 */
     return;
   }
 
   /* two instructions */
-  for (i=0; i<UB4BITS; ++i)
+  for (i=0; i < UINT32_BITS; ++i)
   {
-    if ((a&((ub4)1<<i)) != (b&((ub4)1<<i))) break;
+    if ((a&((uint32_t)1<<i)) != (b&((uint32_t)1<<i))) break;
   }
   /* h2b: 4,6 */
-  sprintf(final->line[0], "  ub4 rsl = ((val << %ld) & 1);\n", i);
+  sprintf(final->line[0], "  uint32_t rsl = ((val << %" PRId32 ") & 1);\n", i);
 }
 
 
@@ -79,10 +86,10 @@ gencode *final;
  * find the value to xor to a and b and c to make none of them 3 
  * assert, (a,b,c) are three distinct values in (0,1,2,3).
  */
-static ub4 find_adder(a,b,c)
-ub4 a;
-ub4 b;
-ub4 c;
+static uint32_t find_adder(a,b,c)
+uint32_t a;
+uint32_t b;
+uint32_t c;
 {
   return (a^b^c^3);
 }
@@ -106,17 +113,17 @@ key      *keys;
 gencode  *final;
 hashform *form;
 {
-  ub4 a = keys->hash_k;
-  ub4 b = keys->next_k->hash_k;
-  ub4 c = keys->next_k->next_k->hash_k;
-  ub4 i,j,x,y,z;
+  uint32_t a = keys->hash_k;
+  uint32_t b = keys->next_k->hash_k;
+  uint32_t c = keys->next_k->next_k->hash_k;
+  uint32_t i,j,x,y,z;
   
   final->used = 1;
 
   if (a == b || a == c || b == c)
   {
     printf("fatal error: duplicate keys\n");
-    exit(SUCCESS);
+    exit(EXIT_FAILURE);
   }
   
   /* one instruction */
@@ -128,32 +135,32 @@ hashform *form;
     if (form->perfect == NORMAL_HP || (x != 3 && y != 3 && z != 3))
     {
       /* h3a: 0,1,2 */
-      sprintf(final->line[0], "  ub4 rsl = (val & 3);\n");
+      sprintf(final->line[0], "  uint32_t rsl = (val & 3);\n");
     }
     else
     {
       /* h3b: 0,3,2 */
-      sprintf(final->line[0], "  ub4 rsl = ((val & 3) ^ %d);\n",
+      sprintf(final->line[0], "  uint32_t rsl = ((val & 3) ^ %d);\n",
 	      find_adder(x,y,z));
     }
     return;
   }
 
-  x = a>>(UB4BITS-2); 
-  y = b>>(UB4BITS-2); 
-  z = c>>(UB4BITS-2); 
+  x = a >> (UINT32_BITS-2); 
+  y = b >> (UINT32_BITS-2); 
+  z = c >> (UINT32_BITS-2); 
   if (x != y && x != z && y != z)
   {
     if (form->perfect == NORMAL_HP || (x != 3 && y != 3 && z != 3)) 
     {
       /* h3c: 3fffffff, 7fffffff, bfffffff */
-      sprintf(final->line[0], "  ub4 rsl = (val >> %ld);\n", (ub4)(UB4BITS-2));
+      sprintf(final->line[0], "  uint32_t rsl = (val >> %" PRId32 ");\n", (uint32_t)(UINT32_BITS-2));
     }
     else
     {
       /* h3d: 7fffffff, bfffffff, ffffffff */
-      sprintf(final->line[0], "  ub4 rsl = ((val >> %ld) ^ %ld);\n",
-	      (ub4)(UB4BITS-2), find_adder(x,y,z));
+      sprintf(final->line[0], "  uint32_t rsl = ((val >> %" PRId32 ") ^ %" PRId32 ");\n",
+	      (uint32_t)(UINT32_BITS-2), find_adder(x,y,z));
     }
     return;
   }
@@ -169,12 +176,12 @@ hashform *form;
       if (form->perfect == NORMAL_HP || (x != 3 && y != 3 && z != 3))
       {
 	/* h3e: ffff3fff, ffff7fff, ffffbfff */
-	sprintf(final->line[0], "  ub4 rsl = ((val >> %ld) & 3);\n", i);
+	sprintf(final->line[0], "  uint32_t rsl = ((val >> %" PRId32 ") & 3);\n", i);
       }
       else
       {
 	/* h3f: ffff7fff, ffffbfff, ffffffff */
-	sprintf(final->line[0], "  ub4 rsl = (((val >> %ld) & 3) ^ %ld);\n", i,
+	sprintf(final->line[0], "  uint32_t rsl = (((val >> %" PRId32 ") & 3) ^ %" PRId32 ");\n", i,
 		find_adder(x,y,z));
       }
       return;
@@ -192,12 +199,12 @@ hashform *form;
       if (form->perfect == NORMAL_HP || (x != 3 && y != 3 && z != 3))
       {
 	/* h3g: 0x000, 0x001, 0x100 */
-	sprintf(final->line[0], "  ub4 rsl = ((val+(val>>%ld))&3);\n", i);
+	sprintf(final->line[0], "  uint32_t rsl = ((val+(val>>%" PRId32 "))&3);\n", i);
       }
       else
       {
 	/* h3h: 0x001, 0x100, 0x101 */
-	sprintf(final->line[0], "  ub4 rsl = (((val+(val>>%ld))&3)^%ld);\n", i,
+	sprintf(final->line[0], "  uint32_t rsl = (((val+(val>>%" PRId32 "))&3)^%" PRId32 ");\n", i,
 		find_adder(x,y,z));
       }
       return;
@@ -229,13 +236,13 @@ hashform *form;
 	{
 	  /* h3i: 0x00, 0x04, 0x10 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = (((val>>%ld) ^ (val>>%ld)) & 3);\n", i, j);
+		  "  uint32_t rsl = (((val>>%" PRId32 ") ^ (val>>%" PRId32 ")) & 3);\n", i, j);
 	}
 	else
 	{
 	  /* h3j: 0x04, 0x10, 0x14 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((((val>>%ld) ^ (val>>%ld)) & 3) ^ %ld);\n",
+		  "  uint32_t rsl = ((((val>>%" PRId32 ") ^ (val>>%" PRId32 ")) & 3) ^ %" PRId32 ");\n",
 		  i, j, find_adder(x,y,z));
 	}
 	return;
@@ -244,7 +251,7 @@ hashform *form;
   }
 
   printf("fatal error: hexthree\n");
-  exit(SUCCESS);
+  exit(EXIT_FAILURE);
 }
 
 
@@ -254,12 +261,12 @@ hashform *form;
  * Assume that a,b,c,d are all have values less than 32.
  */
 static int testfour(a,b,c,d)
-ub4 a;
-ub4 b;
-ub4 c;
-ub4 d;
+uint32_t a;
+uint32_t b;
+uint32_t c;
+uint32_t d;
 {
-  ub4 mask = (1<<a)^(1<<b)^(1<<c)^(1<<d);
+  uint32_t mask = (1<<a)^(1<<b)^(1<<c)^(1<<d);
   return (mask == 0xf);
 }
 
@@ -273,17 +280,17 @@ static void hexfour(keys, final)
 key     *keys;
 gencode *final;
 {
-  ub4 a = keys->hash_k;
-  ub4 b = keys->next_k->hash_k;
-  ub4 c = keys->next_k->next_k->hash_k;
-  ub4 d = keys->next_k->next_k->next_k->hash_k;
-  ub4 w,x,y,z;
-  ub4 i,j,k;
+  uint32_t a = keys->hash_k;
+  uint32_t b = keys->next_k->hash_k;
+  uint32_t c = keys->next_k->next_k->hash_k;
+  uint32_t d = keys->next_k->next_k->next_k->hash_k;
+  uint32_t w,x,y,z;
+  uint32_t i,j,k;
 
   if (a==b || a==c || a==d || b==c || b==d || c==d)
   {
     printf("fatal error: Duplicate keys\n");
-    exit(SUCCESS);
+    exit(EXIT_FAILURE);
   }
 
   final->used = 1;
@@ -297,20 +304,20 @@ gencode *final;
     z = d&3;
     if (testfour(w,x,y,z))
     {
-      sprintf(final->line[0], "  ub4 rsl = (val & 3);\n");   /* h4a: 0,1,2,3 */
+      sprintf(final->line[0], "  uint32_t rsl = (val & 3);\n");   /* h4a: 0,1,2,3 */
       return;
     }
   }
 
-  if (((final->diffbits >> (UB4BITS-2)) & 3) == 3)
+  if (((final->diffbits >> (UINT32_BITS-2)) & 3) == 3)
   {
-    w = a>>(UB4BITS-2);
-    x = b>>(UB4BITS-2);
-    y = c>>(UB4BITS-2);
-    z = d>>(UB4BITS-2);
+    w = a >> (UINT32_BITS-2);
+    x = b >> (UINT32_BITS-2);
+    y = c >> (UINT32_BITS-2);
+    z = d >> (UINT32_BITS-2);
     if (testfour(w,x,y,z))
     {                         /* h4b: 0fffffff, 4fffffff, 8fffffff, cfffffff */
-      sprintf(final->line[0], "  ub4 rsl = (val >> %ld);\n", (ub4)(UB4BITS-2));
+      sprintf(final->line[0], "  uint32_t rsl = (val >> %" PRId32 ");\n", (uint32_t)(UINT32_BITS-2));
       return;
     }
   }
@@ -326,7 +333,7 @@ gencode *final;
       z = (d>>i)&3;
       if (testfour(w,x,y,z))
       {                                                      /* h4c: 0,2,4,6 */
-	sprintf(final->line[0], "  ub4 rsl = ((val >> %ld) & 3);\n", i);
+	sprintf(final->line[0], "  uint32_t rsl = ((val >> %" PRId32 ") & 3);\n", i);
 	return;
       }
     }
@@ -346,7 +353,7 @@ gencode *final;
 	if (testfour(w,x,y,z))
 	{                                                    /* h4d: 0,1,2,4 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val + (val >> %ld)) & 3);\n", i);
+		  "  uint32_t rsl = ((val + (val >> %" PRId32 ")) & 3);\n", i);
 	  return;
 	}
 
@@ -357,7 +364,7 @@ gencode *final;
 	if (testfour(w,x,y,z))
 	{                                                    /* h4e: 0,1,3,5 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val - (val >> %ld)) & 3);\n", i);
+		  "  uint32_t rsl = ((val - (val >> %" PRId32 ")) & 3);\n", i);
 	  return;
 	}
 
@@ -370,7 +377,7 @@ gencode *final;
 	if (testfour(w,x,y,z))
 	{                                                    /* h4g: 3,4,5,8 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val ^ (val >> %ld)) & 3);\n", i);
+		  "  uint32_t rsl = ((val ^ (val >> %" PRId32 ")) & 3);\n", i);
 	  return;
 	}
       }
@@ -392,7 +399,7 @@ gencode *final;
 	if (testfour(w,x,y,z))
 	{                                                    /* h4h: 1,2,6,8 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val & 3) ^ ((val >> %ld) & 1));\n", i);
+		  "  uint32_t rsl = ((val & 3) ^ ((val >> %" PRId32 ") & 1));\n", i);
 	  return;
 	}
 
@@ -403,7 +410,7 @@ gencode *final;
 	if (testfour(w,x,y,z))
 	{                                                    /* h4i: 1,2,8,a */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val & 2) ^ ((val >> %ld) & 1));\n", i);
+		  "  uint32_t rsl = ((val & 2) ^ ((val >> %" PRId32 ") & 1));\n", i);
 	  return;
 	}
       }
@@ -418,7 +425,7 @@ gencode *final;
 	if (testfour(w,x,y,z))
 	{                                                    /* h4j: 0,1,3,4 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val & 3) ^ ((val >> %ld) & 2));\n", i);
+		  "  uint32_t rsl = ((val & 3) ^ ((val >> %" PRId32 ") & 2));\n", i);
 	  return;
 	}
 
@@ -429,7 +436,7 @@ gencode *final;
 	if (testfour(w,x,y,z))
 	{                                                    /* h4k: 1,4,7,8 */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val & 1) ^ ((val >> %ld) & 2));\n", i);
+		  "  uint32_t rsl = ((val & 1) ^ ((val >> %" PRId32 ") & 2));\n", i);
 	  return;
 	}
       }
@@ -453,7 +460,7 @@ gencode *final;
 	  if (testfour(w,x,y,z))
 	  {                                                /* h4l: testcase? */
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) + (val >> %ld)) & 3);\n", 
+		    "  uint32_t rsl = (((val >> %" PRId32 ") + (val >> %" PRId32 ")) & 3);\n", 
 		    i, j);
 	    return;
 	  }
@@ -466,7 +473,7 @@ gencode *final;
 	  if (testfour(w,x,y,z))
 	  {                                                /* h4m: testcase? */
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) - (val >> %ld)) & 3);\n",
+		    "  uint32_t rsl = (((val >> %" PRId32 ") - (val >> %" PRId32 ")) & 3);\n",
 		    i, j);
 	    return;
 	  }
@@ -479,7 +486,7 @@ gencode *final;
 	  if (testfour(w,x,y,z))
 	  {                                                /* h4n: testcase? */
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) ^ (val >> %ld)) & 3);\n",
+		    "  uint32_t rsl = (((val >> %" PRId32 ") ^ (val >> %" PRId32 ")) & 3);\n",
 		    i, j);
 	    return;
 	  }
@@ -504,7 +511,7 @@ gencode *final;
 	  if (testfour(w,x,y,z))
 	  {                                                  /* h4o: 0,4,8,a */
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) & 3) ^ ((val >> %ld) & 1));\n", 
+		    "  uint32_t rsl = (((val >> %" PRId32 ") & 3) ^ ((val >> %" PRId32 ") & 1));\n", 
 		    j, i);
 	    return;
 	  }
@@ -516,7 +523,7 @@ gencode *final;
 	  if (testfour(w,x,y,z))
 	  {                                   /* h4p: 0x04, 0x08, 0x10, 0x14 */
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) & 2) ^ ((val >> %ld) & 1));\n", 
+		    "  uint32_t rsl = (((val >> %" PRId32 ") & 2) ^ ((val >> %" PRId32 ") & 1));\n", 
 		    j, i);
 	    return;
 	  }
@@ -541,19 +548,19 @@ gencode *final;
 	  if (i==0)                                          /* h4q: 0,4,5,8 */
 	  {
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) ^ (val << 1)) & 3);\n",
+		    "  uint32_t rsl = (((val >> %" PRId32 ") ^ (val << 1)) & 3);\n",
 		    j);
 	  }
 	  else if (i==1)                         /* h4r: 0x01,0x09,0x0b,0x10 */
 	  {
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) & 3) ^ (val & 2));\n",
+		    "  uint32_t rsl = (((val >> %" PRId32 ") & 3) ^ (val & 2));\n",
 		    j);
 	  }
 	  else                                               /* h4s: 0,2,6,8 */
 	  {
 	    sprintf(final->line[0], 
-		    "  ub4 rsl = (((val >> %ld) & 3) ^ ((val >> %ld) & 2));\n",
+		    "  uint32_t rsl = (((val >> %" PRId32 ") & 3) ^ ((val >> %" PRId32 ") & 2));\n",
 		    j, (i-1));
 	  }
 	  return;
@@ -566,7 +573,7 @@ gencode *final;
 	if (testfour(w,x,y,z))                   /* h4t: 0x20,0x14,0x10,0x06 */
 	{                   
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = (((val >> %ld) & 1) ^ ((val >> %ld) & 2));\n",
+		  "  uint32_t rsl = (((val >> %" PRId32 ") & 1) ^ ((val >> %" PRId32 ") & 2));\n",
 		  j, i);
 	  return;
 	}
@@ -586,7 +593,7 @@ gencode *final;
    *   attempted above.
    * The generated hash is at most 10 instructions.
    */
-  for (i=final->lowbit; i<UB4BITS; ++i)
+  for (i = final->lowbit; i < UINT32_BITS; ++i)
   {
     y = (c>>i)&1;
     z = (d>>i)&1;
@@ -594,7 +601,7 @@ gencode *final;
       break;
   }
 
-  for (j=final->lowbit; j<UB4BITS; ++j)
+  for (j = final->lowbit; j < UINT32_BITS; ++j)
   {
     x = ((b>>i)&1)^(((b>>j)&1)<<1);
     y = ((c>>i)&1)^(((c>>j)&1)<<1);
@@ -603,7 +610,7 @@ gencode *final;
       break;
   }
 
-  for (k=final->lowbit; k<UB4BITS; ++k)
+  for (k = final->lowbit; k < UINT32_BITS; ++k)
   {
     w = ((a>>i)&1)^(((a>>j)&1)<<1)^(((a>>k)&1)<<2);
     x = ((b>>i)&1)^(((b>>j)&1)<<1)^(((b>>k)&1)<<2);
@@ -614,15 +621,15 @@ gencode *final;
   }
 
   /* Assert: bits i,j,k were found which distinguish a,b,c,d */
-  if (i==UB4BITS || j==UB4BITS || k==UB4BITS)
+  if (i == UINT32_BITS || j == UINT32_BITS || k == UINT32_BITS)
   {
-    printf("Fatal error: hexfour(), i %ld j %ld k %ld\n", i,j,k);
-    exit(SUCCESS);
+    printf("Fatal error: hexfour(), i %" PRId32 " j %" PRId32 " k %" PRId32 "\n", i,j,k);
+    exit(EXIT_FAILURE);
   }
 
   /* now try the four cases */
   {
-    ub4 m,n,o,p;
+    uint32_t m,n,o,p;
     
     /* if any bit has two 1s and two 0s, make that bit o */
     if (((a>>i)&1)+((b>>i)&1)+((c>>i)&1)+((d>>i)&1) != 2)
@@ -633,7 +640,7 @@ gencode *final;
       { m=i; n=j; o=k; }
     if (m > n) {p=m; m=n; n=p; }                          /* guarantee m < n */
 
-    /* printf("m %ld n %ld o %ld  %ld %ld %ld %ld\n", m, n, o, w,x,y,z); */
+    /* printf("m %" PRId32 " n %" PRId32 " o %" PRId32 "  %" PRId32 " %" PRId32 " %" PRId32 " %" PRId32 "\n", m, n, o, w,x,y,z); */
 
     /* seven instructions, multiply bit o by 1 */
     w = (((a>>m)^(a>>o))&1)^((a>>(n-1))&2);
@@ -647,12 +654,12 @@ gencode *final;
       if (m==0)                                                   /* 0,2,8,9 */
       {
 	sprintf(final->line[0], 
-		"  ub4 rsl = (((val^(val>>%ld))&1)^((val>>%ld)&2));\n", o, n-1);
+		"  uint32_t rsl = (((val^(val>>%" PRId32 "))&1)^((val>>%" PRId32 ")&2));\n", o, n-1);
       }
       else                                            /* 0x00,0x04,0x10,0x12 */
       {
 	sprintf(final->line[0], 
-		"  ub4 rsl = ((((val>>%ld) ^ (val>>%ld)) & 1) ^ ((val>>%ld) & 2));\n",
+		"  uint32_t rsl = ((((val>>%" PRId32 ") ^ (val>>%" PRId32 ")) & 1) ^ ((val>>%" PRId32 ") & 2));\n",
 		m, o, n-1);
       }
       return;
@@ -670,19 +677,19 @@ gencode *final;
       if (m==0)                                                   /* 0,1,5,8 */
       {
 	sprintf(final->line[0], 
-		"  ub4 rsl = ((val & 1) ^ (((val>>%ld) ^ (val>>%ld)) & 2));\n",
+		"  uint32_t rsl = ((val & 1) ^ (((val>>%" PRId32 ") ^ (val>>%" PRId32 ")) & 2));\n",
 		n-1, o-1);
       }
       else if (o==0)                                  /* 0x00,0x04,0x05,0x10 */
       {
 	sprintf(final->line[0], 
-		"  ub4 rsl = (((val>>%ld) & 2) ^ (((val>>%ld) ^ val) & 1));\n",
+		"  uint32_t rsl = (((val>>%" PRId32 ") & 2) ^ (((val>>%" PRId32 ") ^ val) & 1));\n",
 		m-1, n);
       }
       else                                            /* 0x00,0x02,0x0a,0x10 */
       {
 	sprintf(final->line[0], 
-		"  ub4 rsl = (((val>>%ld) & 1) ^ (((val>>%ld) ^ (val>>%ld)) & 2));\n",
+		"  uint32_t rsl = (((val>>%" PRId32 ") & 1) ^ (((val>>%" PRId32 ") ^ (val>>%" PRId32 ")) & 2));\n",
 		m, n-1, o-1);
       }
       return;
@@ -696,62 +703,62 @@ gencode *final;
     if (testfour(w,x,y,z))
     {
       final->used = 2;
-      sprintf(final->line[0], "  ub4 b = (val >> %ld) & 1;\n", o);
+      sprintf(final->line[0], "  uint32_t b = (val >> %" PRId32 ") & 1;\n", o);
       if (m==o-1 && m==0)                             /* 0x02,0x10,0x11,0x18 */
       {
 	sprintf(final->line[1], 
-		"  ub4 rsl = ((val & 3) ^ ((val >> %ld) & 2) ^ b);\n", n-1);
+		"  uint32_t rsl = ((val & 3) ^ ((val >> %" PRId32 ") & 2) ^ b);\n", n-1);
       }
       else if (m==o-1)                                            /* 0,4,6,c */
       {
 	sprintf(final->line[1], 
-		"  ub4 rsl = (((val >> %ld) & 3) ^ ((val >> %ld) & 2) ^ b);\n",
+		"  uint32_t rsl = (((val >> %" PRId32 ") & 3) ^ ((val >> %" PRId32 ") & 2) ^ b);\n",
 		m, n-1);
       }
       else if (m==n-1 && m==0)                                /* 02,0a,0b,18 */
       {
 	sprintf(final->line[1], 
-		"  ub4 rsl = ((val & 3) ^ b ^ (b << 1));\n");
+		"  uint32_t rsl = ((val & 3) ^ b ^ (b << 1));\n");
       }
       else if (m==n-1)                                            /* 0,2,4,8 */
       {
 	sprintf(final->line[1], 
-		"  ub4 rsl = (((val >> %ld) & 3) ^ b ^ (b << 1));\n", m);
+		"  uint32_t rsl = (((val >> %" PRId32 ") & 3) ^ b ^ (b << 1));\n", m);
       }
       else if (o==n-1 && m==0)                          /* h4am: not reached */
       {
 	sprintf(final->line[1], 
-		"  ub4 rsl = ((val & 1) ^ ((val >> %ld) & 3) ^ (b <<1 ));\n",
+		"  uint32_t rsl = ((val & 1) ^ ((val >> %" PRId32 ") & 3) ^ (b <<1 ));\n",
 		o);
       }
       else if (o==n-1)                                /* 0x00,0x02,0x08,0x10 */
       {
 	sprintf(final->line[1], 
-		"  ub4 rsl = (((val >> %ld) & 1) ^ ((val >> %ld) & 3) ^ (b << 1));\n",
+		"  uint32_t rsl = (((val >> %" PRId32 ") & 1) ^ ((val >> %" PRId32 ") & 3) ^ (b << 1));\n",
 		m, o);
       }
       else if ((m != o-1) && (m != n-1) && (o != m-1) && (o != n-1))
       {
 	final->used = 3;
-	sprintf(final->line[0], "  ub4 newval = val & 0x%lx;\n", 
-		(((ub4)1<<m)^((ub4)1<<n)^((ub4)1<<o)));
+	sprintf(final->line[0], "  uint32_t newval = val & 0x%" PRIx32 ";\n", 
+		(((uint32_t)1<<m)^((uint32_t)1<<n)^((uint32_t)1<<o)));
 	if (o==0)                                     /* 0x00,0x01,0x04,0x10 */
 	{
-	  sprintf(final->line[1], "  ub4 b = -newval;\n");
+	  sprintf(final->line[1], "  uint32_t b = -newval;\n");
 	}
 	else                                          /* 0x00,0x04,0x09,0x10 */
 	{
-	  sprintf(final->line[1], "  ub4 b = -(newval >> %ld);\n", o);
+	  sprintf(final->line[1], "  uint32_t b = -(newval >> %" PRId32 ");\n", o);
 	}
 	if (m==0)                                     /* 0x00,0x04,0x09,0x10 */
 	{
 	  sprintf(final->line[2], 
-		  "  ub4 rsl = ((newval ^ (newval>>%ld) ^ b) & 3);\n", n-1);
+		  "  uint32_t rsl = ((newval ^ (newval>>%" PRId32 ") ^ b) & 3);\n", n-1);
 	}
 	else                                          /* 0x00,0x03,0x04,0x10 */
 	{
 	  sprintf(final->line[2], 
-		  "  ub4 rsl = (((newval>>%ld) ^ (newval>>%ld) ^ b) & 3);\n",
+		  "  uint32_t rsl = (((newval>>%" PRId32 ") ^ (newval>>%" PRId32 ") ^ b) & 3);\n",
 		  m, n-1);
 	}
       }
@@ -759,34 +766,34 @@ gencode *final;
       {
 	if (o==0)                                     /* 0x02,0x03,0x0a,0x10 */
 	{
-	  sprintf(final->line[0], "  ub4 b = (val<<1) & 2;\n");
+	  sprintf(final->line[0], "  uint32_t b = (val<<1) & 2;\n");
 	}
 	else if (o==1)                                /* 0x00,0x02,0x04,0x10 */
 	{
-	  sprintf(final->line[0], "  ub4 b = val & 2;\n");
+	  sprintf(final->line[0], "  uint32_t b = val & 2;\n");
 	}
 	else                                          /* 0x00,0x04,0x08,0x20 */
 	{
-	  sprintf(final->line[0], "  ub4 b = (val>>%ld) & 2;\n", o-1);
+	  sprintf(final->line[0], "  uint32_t b = (val>>%" PRId32 ") & 2;\n", o-1);
 	}
 
 	if (o==0)                                     /* 0x02,0x03,0x0a,0x10 */
 	{
 	  sprintf(final->line[1],
-		  "  ub4 rsl = ((val & 3) ^ ((val>>%ld) & 1) ^ b);\n",
+		  "  uint32_t rsl = ((val & 3) ^ ((val>>%" PRId32 ") & 1) ^ b);\n",
 		  n);
 	}
 	else                                          /* 0x00,0x02,0x04,0x10 */
 	{
 	  sprintf(final->line[1],
-		  "  ub4 rsl = (((val>>%ld) & 3) ^ ((val>>%ld) & 1) ^ b);\n",
+		  "  uint32_t rsl = (((val>>%" PRId32 ") & 3) ^ ((val>>%" PRId32 ") & 1) ^ b);\n",
 		  o, n);
 	}
       }
       else                         /* h4ax: 10 instructions, but not reached */
       {
 	sprintf(final->line[1], 
-		"  ub4 rsl = (((val>>%ld) & 1) ^ ((val>>%ld) & 2) ^ b ^ (b<<1));\n",
+		"  uint32_t rsl = (((val>>%" PRId32 ") & 1) ^ ((val>>%" PRId32 ") & 2) ^ b ^ (b<<1));\n",
 		m, n-1);
       }
 
@@ -801,13 +808,13 @@ gencode *final;
     if (testfour(w,x,y,z))
     {                                                    /* h4v, not reached */
       sprintf(final->line[0], 
-	      "  ub4 rsl = (((val>>%ld) & 1) ^ ((val>>%ld) & 2));\n", m, n-1);
+	      "  uint32_t rsl = (((val>>%" PRId32 ") & 1) ^ ((val>>%" PRId32 ") & 2));\n", m, n-1);
       return;
     }
   }
 
   printf("fatal error: bug in hexfour!\n");
-  exit(SUCCESS);
+  exit(EXIT_FAILURE);
   return;
 }
 
@@ -815,9 +822,9 @@ gencode *final;
 /* test if a_k is distinct and in range for all keys */
 static int testeight(keys, badmask)
 key      *keys;                                         /* keys being hashed */
-ub1       badmask;                       /* used for minimal perfect hashing */
+uint8_t       badmask;                       /* used for minimal perfect hashing */
 {
-  ub1  mask = badmask;
+  uint8_t  mask = badmask;
   key *mykey;
 
   for (mykey=keys; mykey; mykey=mykey->next_k)
@@ -838,13 +845,13 @@ ub1       badmask;                       /* used for minimal perfect hashing */
  */
 static int hexeight(keys, nkeys, final, form)
 key      *keys;
-ub4       nkeys;
+uint32_t       nkeys;
 gencode  *final;
 hashform *form;
 {
   key *mykey;                                       /* walk through the keys */
-  ub4  i,j,k;
-  ub1  badmask;
+  uint32_t  i,j,k;
+  uint8_t  badmask;
 
   printf("hexeight\n");
 
@@ -862,7 +869,7 @@ hashform *form;
   if (testeight(keys, badmask))
   {                                                                   /* h8a */
     final->used = 1;
-    sprintf(final->line[0], "  ub4 rsl = (val & 7);\n");
+    sprintf(final->line[0], "  uint32_t rsl = (val & 7);\n");
     return TRUE;
   }
 
@@ -874,7 +881,7 @@ hashform *form;
     if (testeight(keys, badmask))
     {                                                                 /* h8b */
       final->used = 1;
-      sprintf(final->line[0], "  ub4 rsl = ((val >> %ld) & 7);\n", i);
+      sprintf(final->line[0], "  uint32_t rsl = ((val >> %" PRId32 ") & 7);\n", i);
       return TRUE;
     }
   }
@@ -891,10 +898,10 @@ hashform *form;
 	final->used = 1;
 	if (i == 0)                                                   /* h8c */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val + (val >> %ld)) & 7);\n", j);
+		  "  uint32_t rsl = ((val + (val >> %" PRId32 ")) & 7);\n", j);
 	else                                                          /* h8d */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = (((val >> %ld) + (val >> %ld)) & 7);\n", i, j);
+		  "  uint32_t rsl = (((val >> %" PRId32 ") + (val >> %" PRId32 ")) & 7);\n", i, j);
 	return TRUE;
       }
 
@@ -905,10 +912,10 @@ hashform *form;
 	final->used = 1;
 	if (i == 0)                                                   /* h8e */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val ^ (val >> %ld)) & 7);\n", j);
+		  "  uint32_t rsl = ((val ^ (val >> %" PRId32 ")) & 7);\n", j);
 	else                                                          /* h8f */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = (((val >> %ld) ^ (val >> %ld)) & 7);\n", i, j);
+		  "  uint32_t rsl = (((val >> %" PRId32 ") ^ (val >> %" PRId32 ")) & 7);\n", i, j);
 
 	return TRUE;
       }
@@ -920,10 +927,10 @@ hashform *form;
 	final->used = 1;
 	if (i == 0)                                                   /* h8g */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = ((val - (val >> %ld)) & 7);\n", j);
+		  "  uint32_t rsl = ((val - (val >> %" PRId32 ")) & 7);\n", j);
 	else                                                          /* h8h */
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = (((val >> %ld) - (val >> %ld)) & 7);\n", i, j);
+		  "  uint32_t rsl = (((val >> %" PRId32 ") - (val >> %" PRId32 ")) & 7);\n", i, j);
 
 	return TRUE;
       }
@@ -946,7 +953,7 @@ hashform *form;
 	{                                                             /* h8i */
 	  final->used = 1;
 	  sprintf(final->line[0], 
-		  "  ub4 rsl = (((val >> %ld) + (val >> %ld) + (val >> %ld)) & 7);\n", 
+		  "  uint32_t rsl = (((val >> %" PRId32 ") + (val >> %" PRId32 ") + (val >> %" PRId32 ")) & 7);\n", 
 		  i, j, k);
 	  return TRUE;
 	}
@@ -986,16 +993,16 @@ hashform *form;
  */
 static void hexn(keys, salt, alen, blen, final)
 key     *keys;
-ub4      salt;
-ub4      alen;
-ub4      blen;
+uint32_t      salt;
+uint32_t      alen;
+uint32_t      blen;
 gencode *final;
 {
   key *mykey;
-  ub4  highbit = final->highbit;
-  ub4  lowbit = final->lowbit;
-  ub4  alog = mylog2(alen);
-  ub4  blog = mylog2(blen);
+  uint32_t  highbit = final->highbit;
+  uint32_t  lowbit = final->lowbit;
+  uint32_t  alog = mylog2(alen);
+  uint32_t  blog = mylog2(blen);
 
   for (;;)
   {
@@ -1005,21 +1012,21 @@ gencode *final;
       /* a = val>>30; b=val&3 */
       for (mykey=keys; mykey; mykey=mykey->next_k)
       {
-	mykey->a_k = (mykey->hash_k << (UB4BITS-(highbit+1)))>>(UB4BITS-alog);
+	mykey->a_k = (mykey->hash_k << (UINT32_BITS-(highbit+1))) >> (UINT32_BITS-alog);
 	mykey->b_k = (mykey->hash_k >> lowbit) & (blen-1);
       }
       if (lowbit == 0)                                                /* hna */
-	sprintf(final->line[5], "  b = (val & 0x%lx);\n", 
+	sprintf(final->line[5], "  b = (val & 0x%" PRIx32 ");\n", 
 		blen-1);
       else                                                            /* hnb */
-	sprintf(final->line[5], "  b = ((val >> %ld) & 0x%lx);\n", 
+	sprintf(final->line[5], "  b = ((val >> %" PRId32 ") & 0x%" PRIx32 ");\n", 
 		lowbit, blen-1);
-      if (highbit+1 == UB4BITS)                                       /* hnc */
-	sprintf(final->line[6], "  a = (val >> %ld);\n",
-		UB4BITS-alog);
+      if (highbit+1 == UINT32_BITS)                                       /* hnc */
+	sprintf(final->line[6], "  a = (val >> %" PRId32 ");\n",
+		UINT32_BITS-alog);
       else                                                            /* hnd */
-	sprintf(final->line[6], "  a = ((val << %ld ) >> %ld);\n",
-		UB4BITS-(highbit+1), UB4BITS-alog);
+	sprintf(final->line[6], "  a = ((val << %" PRId32 " ) >> %" PRId32 ");\n",
+		UINT32_BITS-(highbit+1), UINT32_BITS-alog);
   
       ++final->i;
       return;
@@ -1029,19 +1036,19 @@ gencode *final;
       for (mykey=keys; mykey; mykey=mykey->next_k)
       {
 	mykey->a_k = (mykey->hash_k >> lowbit) & (alen-1);
-	mykey->b_k = (mykey->hash_k << (UB4BITS-(highbit+1)))>>(UB4BITS-blog);
+	mykey->b_k = (mykey->hash_k << (UINT32_BITS-(highbit+1)))>>(UINT32_BITS-blog);
       }
-      if (highbit+1 == UB4BITS)                                       /* hne */
-	sprintf(final->line[5], "  b = (val >> %ld);\n",
-		UB4BITS-blog);
+      if (highbit+1 == UINT32_BITS)                                       /* hne */
+	sprintf(final->line[5], "  b = (val >> %" PRId32 ");\n",
+		UINT32_BITS-blog);
       else                                                            /* hnf */
-	sprintf(final->line[5], "  b = ((val << %ld ) >> %ld);\n",
-		UB4BITS-(highbit+1), UB4BITS-blog);
+	sprintf(final->line[5], "  b = ((val << %" PRId32 " ) >> %" PRId32 ");\n",
+		UINT32_BITS-(highbit+1), UINT32_BITS-blog);
       if (lowbit == 0)                                                /* hng */
-	sprintf(final->line[6], "  a = (val & 0x%lx);\n", 
+	sprintf(final->line[6], "  a = (val & 0x%" PRIx32 ");\n", 
 		alen-1);
       else                                                            /* hnh */
-	sprintf(final->line[6], "  a = ((val >> %ld) & 0x%lx);\n", 
+	sprintf(final->line[6], "  a = ((val >> %" PRId32 ") & 0x%" PRIx32 ");\n", 
 		lowbit, alen-1);
   
       ++final->i;
@@ -1069,23 +1076,23 @@ gencode *final;
       for (mykey=keys; mykey; mykey=mykey->next_k)
       {
 	mykey->b_k = (mykey->hash_k >> (final->j)) & (blen-1);
-	mykey->a_k = (mykey->hash_k << (UB4BITS-final->k-1)) >> (UB4BITS-alog);
+	mykey->a_k = (mykey->hash_k << (UINT32_BITS-final->k-1)) >> (UINT32_BITS-alog);
       }
       if (final->j == 0)                                              /* hni */
-	sprintf(final->line[5], "  b = val & 0x%lx;\n",
+	sprintf(final->line[5], "  b = val & 0x%" PRIx32 ";\n",
 		blen-1);
-      else if (blog+final->j == UB4BITS)                             /* hnja */
-	sprintf(final->line[5], "  b = val >> %ld;\n",
+      else if (blog+final->j == UINT32_BITS)                             /* hnja */
+	sprintf(final->line[5], "  b = val >> %" PRId32 ";\n",
 		final->j);
       else
-	sprintf(final->line[5], "  b = (val >> %ld) & 0x%lx;\n",      /* hnj */
+	sprintf(final->line[5], "  b = (val >> %" PRId32 ") & 0x%" PRIx32 ";\n",      /* hnj */
 		final->j, blen-1);
-      if (UB4BITS-final->k-1 == 0)                                    /* hnk */
-	sprintf(final->line[6], "  a = (val >> %ld);\n",
-		UB4BITS-alog);
+      if (UINT32_BITS-final->k-1 == 0)                                    /* hnk */
+	sprintf(final->line[6], "  a = (val >> %" PRId32 ");\n",
+		UINT32_BITS-alog);
       else                                                            /* hnl */
-	sprintf(final->line[6], "  a = ((val << %ld) >> %ld);\n",
-		UB4BITS-final->k-1, UB4BITS-alog);
+	sprintf(final->line[6], "  a = ((val << %" PRId32 ") >> %" PRId32 ");\n",
+		UINT32_BITS-final->k-1, UINT32_BITS-alog);
       while (++final->j < highbit)
       {
 	if (((final->diffbits>>(final->j)) & (blen-1)) > 2)
@@ -1096,7 +1103,7 @@ gencode *final;
     case 5:
       while (++final->k < highbit)
       {
-	if ((((final->diffbits<<(UB4BITS-final->k-1))>>alog) & (alen-1)) > 0)
+	if ((((final->diffbits<<(UINT32_BITS-final->k-1))>>alog) & (alen-1)) > 0)
 	  break;
       }
       if (!(final->k < highbit))
@@ -1112,8 +1119,8 @@ gencode *final;
     case 6:
       /*
        * cases 6,7,8:
-       * for (k=0; k<UB4BITS-alog; ++k)
-       *   for (j=0; j<UB4BITS-blog; ++j)
+       * for (k=0; k<UINT32_BITS-alog; ++k)
+       *   for (j=0; j<UINT32_BITS-blog; ++j)
        *     val = val+f(salt);
        *     val ^= (val >> 16);
        *     val += (val << 8);
@@ -1129,16 +1136,16 @@ gencode *final;
     case 7:
       /* Just do something that will surely work */
       {
-	ub4 addk = 0x9e3779b9*salt;
+	uint32_t addk = 0x9e3779b9*salt;
 
-	if (!(final->j <= UB4BITS-blog))
+	if (!(final->j <= UINT32_BITS-blog))
 	{
 	  ++final->i;
 	  break;
 	}
 	for (mykey=keys; mykey; mykey=mykey->next_k)
 	{
-	  ub4 val = mykey->hash_k + addk;
+	  uint32_t val = mykey->hash_k + addk;
 	  if (final->highbit+1 - final->lowbit > 16)
 	    val ^= (val >> 16);
 	  if (final->highbit+1 - final->lowbit > 8)
@@ -1146,26 +1153,26 @@ gencode *final;
 	  val ^= (val >> 4);
 	  mykey->b_k = (val >> final->j) & (blen-1);
 	  if (final->k == 0)
-	    mykey->a_k = val >> (UB4BITS-alog);
+	    mykey->a_k = val >> (UINT32_BITS-alog);
 	  else
-	    mykey->a_k = (val + (val << final->k)) >> (UB4BITS-alog);
+	    mykey->a_k = (val + (val << final->k)) >> (UINT32_BITS-alog);
 	}
-	sprintf(final->line[1], "  val += 0x%lx;\n", addk);
+	sprintf(final->line[1], "  val += 0x%" PRIx32 ";\n", addk);
 	if (final->highbit+1 - final->lowbit > 16)                    /* hnm */
 	  sprintf(final->line[2], "  val ^= (val >> 16);\n");
 	if (final->highbit+1 - final->lowbit > 8)                     /* hnn */
 	  sprintf(final->line[3], "  val += (val << 8);\n");
 	sprintf(final->line[4], "  val ^= (val >> 4);\n");
 	if (final->j == 0)              /* hno: don't know how to reach this */
-	  sprintf(final->line[5], "  b = val & 0x%lx;\n", blen-1);
+	  sprintf(final->line[5], "  b = val & 0x%" PRIx32 ";\n", blen-1);
 	else                                                          /* hnp */
-	  sprintf(final->line[5], "  b = (val >> %ld) & 0x%lx;\n",
+	  sprintf(final->line[5], "  b = (val >> %" PRId32 ") & 0x%" PRIx32 ";\n",
 		  final->j, blen-1);
 	if (final->k == 0)                                            /* hnq */
-	  sprintf(final->line[6], "  a = val >> %ld;\n", UB4BITS-alog);
+	  sprintf(final->line[6], "  a = val >> %" PRId32 ";\n", UINT32_BITS-alog);
 	else                                                          /* hnr */
-	  sprintf(final->line[6], "  a = (val + (val << %ld)) >> %ld;\n",
-		  final->k, UB4BITS-alog);
+	  sprintf(final->line[6], "  a = (val + (val << %" PRId32 ")) >> %" PRId32 ";\n",
+		  final->k, UINT32_BITS-alog);
 
 	++final->j;
 	return;
@@ -1173,7 +1180,7 @@ gencode *final;
 
     case 8:
       ++final->k;
-      if (!(final->k <= UB4BITS-alog))
+      if (!(final->k <= UINT32_BITS-alog))
       {
 	++final->i;
 	break;
@@ -1196,27 +1203,27 @@ static void setlow(keys, final)
 key     *keys;
 gencode *final;
 {
-  ub4  lowbit;
-  ub4  highbit;
-  ub4  i;
+  uint32_t  lowbit;
+  uint32_t  highbit;
+  uint32_t  i;
   key *mykey;
-  ub4  firstkey;
+  uint32_t  firstkey;
 
   /* mark the interesting bits in final->mask */
-  final->diffbits = (ub4)0;
+  final->diffbits = (uint32_t)0;
   if (keys) firstkey = keys->hash_k;
   for (mykey=keys;  mykey!=(key *)0;  mykey=mykey->next_k)
     final->diffbits |= (firstkey ^ mykey->hash_k);
 
   /* find the lowest interesting bit */
-  for (i=0; i<UB4BITS; ++i)
-    if (final->diffbits & (((ub4)1)<<i))
+  for (i=0; i<UINT32_BITS; ++i)
+    if (final->diffbits & (((uint32_t)1)<<i))
       break;
   final->lowbit = i;
 
   /* find the highest interesting bit */
-  for (i=UB4BITS; --i; )
-    if (final->diffbits & (((ub4)1)<<i))
+  for (i=UINT32_BITS; --i; )
+    if (final->diffbits & (((uint32_t)1)<<i))
       break;
   final->highbit = i;
 }
@@ -1243,11 +1250,11 @@ gencode *final;
  */
 int inithex(keys, nkeys, alen, blen, smax, salt, final, form)
 key      *keys;                                          /* list of all keys */
-ub4       nkeys;                                   /* number of keys to hash */
-ub4       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
-ub4       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
-ub4       smax;                   /* maximum range of computable hash values */
-ub4       salt;                     /* used to initialize the hash function */
+uint32_t       nkeys;                                   /* number of keys to hash */
+uint32_t       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
+uint32_t       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
+uint32_t       smax;                   /* maximum range of computable hash values */
+uint32_t       salt;                     /* used to initialize the hash function */
 gencode  *final;                          /* output, code for the final hash */
 hashform *form;                                           /* user directives */
 {
@@ -1278,7 +1285,7 @@ hashform *form;                                           /* user directives */
       final->used = 8;
       final->i = 1;
       final->j = final->k = final->l = final->m = final->n = final->o = 0;
-      sprintf(final->line[0], "  ub4 a, b, rsl;\n");
+      sprintf(final->line[0], "  uint32_t a, b, rsl;\n");
       sprintf(final->line[1], "\n");
       sprintf(final->line[2], "\n");
       sprintf(final->line[3], "\n");
