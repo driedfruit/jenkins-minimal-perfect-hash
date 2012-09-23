@@ -34,7 +34,7 @@ Here is my C code for minimal perfect hashing, plus a test case.
 
 The generator is run like so, _"perfect -nm < samperf.txt"_ , and it produces the
 C files [phash.h][21] and [phash.c][22]. The sanity test program, which uses
-the generated hash to hash all the original keys, is run like so, _"foo -nm <
+the generated hash to hash all the original keys, is run like so, _"test -nm <
 samperf.txt"_.
 
 ### Usage
