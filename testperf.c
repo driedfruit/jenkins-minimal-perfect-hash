@@ -4,14 +4,21 @@ Test a perfect hash.
 By Bob Jenkins.  Public Domain.
 ----------------------------------------------------------------------------
 */
-#ifndef STANDARD
-#include "standard.h"
-#endif
 #ifndef RECYCLE
 #include "recycle.h"
 #endif
 #ifndef PHASH
 #include "phash.h"
+#endif
+
+#include "stdio.h"  /* for std* streams, fprintf() */
+#include "string.h" /* for strlen() */
+#include "stdlib.h" /* for EXIT_SUCCESS */
+#ifndef TRUE
+#define TRUE 1
+#endif
+#ifndef FALSE
+#define FALSE 0
 #endif
 
 /* user directives: perfect hash? minimal perfect hash? input is an int? */
@@ -32,7 +39,7 @@ typedef  struct hashform  hashform;
 struct key
 {
   char *kname;
-  ub4   klen;
+  uint32_t   klen;
   struct key *knext;
 };
 typedef  struct key  key;
@@ -40,7 +47,7 @@ typedef  struct key  key;
 /* get the list of keys */
 static void getkeys(keys, nkeys, textroot, keyroot)
 key    **keys;        /* list of all keys */
-ub4     *nkeys;       /* number of keys */
+uint32_t     *nkeys;       /* number of keys */
 reroot  *textroot;    /* get space to store key text */
 reroot  *keyroot;     /* get space for keys */
 {
@@ -48,14 +55,14 @@ reroot  *keyroot;     /* get space for keys */
   char *mytext;
   mytext = (char *)renew(textroot);
   *keys  = (key *)0;
-  *nkeys = (ub4)0;
+  *nkeys = (uint32_t)0;
   while (fgets(mytext, MAXKEYLEN, stdin))
   {
-    ub4 i;
+    uint32_t i;
     mykey = (key *)renew(keyroot);
-    mykey->kname = (ub1 *)mytext;
+    mykey->kname = (uint8_t *)mytext;
     mytext = (char *)renew(textroot);
-    mykey->klen  = (ub4)(strlen((char *)mykey->kname)-1);
+    mykey->klen  = (uint32_t)(strlen((char *)mykey->kname)-1);
     mykey->knext = *keys;
     *keys = mykey;
     ++*nkeys;
@@ -72,7 +79,7 @@ Read in the keys, find the hash, and write the .c and .h files
 void driver(form)
 hashform *form;
 {
-  ub4     nkeys;      /* number of keys */
+  uint32_t     nkeys;      /* number of keys */
   key    *keys;       /* head of list of keys */
   key    *mykey;
   reroot *textroot;   /* MAXKEYLEN-character text lines */
@@ -88,10 +95,10 @@ hashform *form;
 
   for (mykey=keys; mykey; mykey=mykey->knext)
   {
-    ub4 hash;
-    ub4 i;
-    ub4 a;
-    ub4 b;
+    uint32_t hash;
+    uint32_t i;
+    uint32_t a;
+    uint32_t b;
     switch(form->mode)
     {
     case NORMAL_HM:
@@ -134,7 +141,7 @@ hashform *form;
 void usage_error()
 {
   printf("usage is the same as perfect (which see)\n");
-  exit(SUCCESS);
+  exit(EXIT_SUCCESS);
 }
 
 int main(argc, argv)
