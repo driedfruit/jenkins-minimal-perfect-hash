@@ -4,12 +4,8 @@ Test a perfect hash.
 By Bob Jenkins.  Public Domain.
 ----------------------------------------------------------------------------
 */
-#ifndef RECYCLE
 #include "recycle.h"
-#endif
-#ifndef PHASH
 #include "phash.h"
-#endif
 
 #include "inttypes.h" /* for PRI/SCN format specifiers */
 #include "stdio.h"  /* for std* streams, fprintf() */

@@ -14,18 +14,10 @@ those pairs.
 ------------------------------------------------------------------------------
 */
 
-#ifndef STANDARD
 #include "standard.h"
-#endif
-#ifndef LOOKUPA
 #include "lookupa.h"
-#endif
-#ifndef RECYCLE
 #include "recycle.h"
-#endif
-#ifndef PERFECT
 #include "perfect.h"
-#endif
 
 /* 
  * Find a perfect hash when there is only one key.  Zero instructions.

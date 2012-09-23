@@ -46,18 +46,10 @@ determined a perfect hash for the whole set of keys.
 ------------------------------------------------------------------------------
 */
 
-#ifndef STANDARD
 #include "standard.h"
-#endif
-#ifndef LOOKUPA
 #include "lookupa.h"
-#endif
-#ifndef RECYCLE
 #include "recycle.h"
-#endif
-#ifndef PERFECT
 #include "perfect.h"
-#endif
 
 /*
 ------------------------------------------------------------------------------

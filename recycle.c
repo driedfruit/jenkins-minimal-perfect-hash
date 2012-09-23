@@ -13,9 +13,7 @@ This also decreases memory fragmentation, and freeing structures
 --------------------------------------------------------------------
 */
 
-#ifndef RECYCLE
-# include "recycle.h"
-#endif
+#include "recycle.h"
 
 #include "stdio.h"  /* for std* streams, fprintf() */
 #include "malloc.h" /* for free() */
