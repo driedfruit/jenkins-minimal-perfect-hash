@@ -32,7 +32,7 @@ lookupa.o  : lookupa.c lookupa.h
 
 recycle.o  : recycle.c recycle.h
 
-test_hash.o : phash.c phash.h lookupa.h
+test_hash.o : test_hash.c test_hash.h lookupa.h
 
 testperf.o : testperf.c recycle.h test_hash.h
 
