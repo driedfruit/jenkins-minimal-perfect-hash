@@ -218,7 +218,7 @@ gencode  *final;                          /* output, code for the final hash */
     }
     final->used = 4;
     sprintf(final->line[0], 
-	    "  ub4 i,state[CHECKSTATE],rsl;\n");
+	    "  uint32_t i,state[CHECKSTATE],rsl;\n");
     sprintf(final->line[1], 
 	    "  for (i=0; i<CHECKSTATE; ++i) state[i]=0x%lx;\n",initlev);
     sprintf(final->line[2],
@@ -240,7 +240,7 @@ gencode  *final;                          /* output, code for the final hash */
     }
     final->used = 2;
     sprintf(final->line[0], 
-	    "  ub4 rsl, val = lookup(key, len, 0x%lx);\n", initlev);
+	    "  uint32_t rsl, val = lookup(key, len, 0x%lx);\n", initlev);
     if (smax <= 1)
     {
       sprintf(final->line[1], "  rsl = 0;\n");
@@ -294,16 +294,16 @@ gencode  *final;                            /* generated code for final hash */
   final->used = 1;
   if (smax <= 1)
   {
-    sprintf(final->line[0], "  ub4 rsl = 0;\n");
+    sprintf(final->line[0], "  uint32_t rsl = 0;\n");
   }
   else if (blen < USE_SCRAMBLE)
   {
-    sprintf(final->line[0], "  ub4 rsl = ((val & 0x%lx) ^ tab[val >> %ld]);\n",
+    sprintf(final->line[0], "  uint32_t rsl = ((val & 0x%lx) ^ tab[val >> %ld]);\n",
 	    amask, UB4BITS-blog);
   }
   else
   {
-    sprintf(final->line[0], "  ub4 rsl = ((val & 0x%lx) ^ scramble[tab[val >> %ld]]);\n",
+    sprintf(final->line[0], "  uint32_t rsl = ((val & 0x%lx) ^ scramble[tab[val >> %ld]]);\n",
 	    amask, UB4BITS-blog);
   }
 }
@@ -1015,25 +1015,24 @@ ub4  salt;
   FILE *f;
   f = fopen("phash.h", "w");
   fprintf(f, "/* Perfect hash definitions */\n");
-  fprintf(f, "#ifndef STANDARD\n");
-  fprintf(f, "#include \"standard.h\"\n");
-  fprintf(f, "#endif /* STANDARD */\n");
   fprintf(f, "#ifndef PHASH\n");
   fprintf(f, "#define PHASH\n");
+  fprintf(f, "\n");  
+  fprintf(f, "#include \"stdint.h\"\n");
   fprintf(f, "\n");
   if (blen > 0)
   {
     if (smax <= UB1MAXVAL+1 || blen >= USE_SCRAMBLE)
-      fprintf(f, "extern ub1 tab[];\n");
+      fprintf(f, "extern uint8_t tab[];\n");
     else
     {
-      fprintf(f, "extern ub2 tab[];\n");
+      fprintf(f, "extern uint16_t tab[];\n");
       if (blen >= USE_SCRAMBLE)
       {
 	if (smax <= UB2MAXVAL+1)
-	  fprintf(f, "extern ub2 scramble[];\n");
+	  fprintf(f, "extern uint16_t scramble[];\n");
 	else
-	  fprintf(f, "extern ub4 scramble[];\n");
+	  fprintf(f, "extern uint32_t scramble[];\n");
       }
     }
     fprintf(f, "#define PHASHLEN 0x%lx  /* length of hash mapping table */\n",
@@ -1046,7 +1045,7 @@ ub4  salt;
   fprintf(f, "#define PHASHSALT 0x%.8lx /* internal, initialize normal hash */\n",
           salt*0x9e3779b9);
   fprintf(f, "\n");
-  fprintf(f, "ub4 phash();\n");
+  fprintf(f, "uint32_t phash();\n");
   fprintf(f, "\n");
   fprintf(f, "#endif  /* PHASH */\n");
   fprintf(f, "\n");
@@ -1066,29 +1065,22 @@ hashform *form;                                           /* user directives */
   FILE *f;
   f = fopen("phash.c", "w");
   fprintf(f, "/* table for the mapping for the perfect hash */\n");
-  fprintf(f, "#ifndef STANDARD\n");
-  fprintf(f, "#include \"standard.h\"\n");
-  fprintf(f, "#endif /* STANDARD */\n");
-  fprintf(f, "#ifndef PHASH\n");
   fprintf(f, "#include \"phash.h\"\n");
-  fprintf(f, "#endif /* PHASH */\n");
-  fprintf(f, "#ifndef LOOKUPA\n");
   fprintf(f, "#include \"lookupa.h\"\n");
-  fprintf(f, "#endif /* LOOKUPA */\n");
   fprintf(f, "\n");
   if (blen >= USE_SCRAMBLE)
   {
     fprintf(f, "/* A way to make the 1-byte values in tab bigger */\n");
     if (smax > UB2MAXVAL+1)
     {
-      fprintf(f, "ub4 scramble[] = {\n");
+      fprintf(f, "uint32_t scramble[] = {\n");
       for (i=0; i<=UB1MAXVAL; i+=4)
         fprintf(f, "0x%.8lx, 0x%.8lx, 0x%.8lx, 0x%.8lx,\n",
                 scramble[i+0], scramble[i+1], scramble[i+2], scramble[i+3]);
     }
     else
     {
-      fprintf(f, "ub2 scramble[] = {\n");
+      fprintf(f, "uint16_t scramble[] = {\n");
       for (i=0; i<=UB1MAXVAL; i+=8)
         fprintf(f, 
 "0x%.4lx, 0x%.4lx, 0x%.4lx, 0x%.4lx, 0x%.4lx, 0x%.4lx, 0x%.4lx, 0x%.4lx,\n",
@@ -1103,9 +1095,9 @@ hashform *form;                                           /* user directives */
     fprintf(f, "/* small adjustments to _a_ to make values distinct */\n");
 
     if (smax <= UB1MAXVAL+1 || blen >= USE_SCRAMBLE)
-      fprintf(f, "ub1 tab[] = {\n");
+      fprintf(f, "uint8_t tab[] = {\n");
     else
-      fprintf(f, "ub2 tab[] = {\n");
+      fprintf(f, "uint16_t tab[] = {\n");
 
     if (blen < 16)
     {
@@ -1153,21 +1145,21 @@ hashform *form;                                           /* user directives */
   switch(form->mode)
   {
   case NORMAL_HM:
-    fprintf(f, "ub4 phash(key, len)\n");
+    fprintf(f, "uint32_t phash(key, len)\n");
     fprintf(f, "char *key;\n");
     fprintf(f, "int   len;\n");
     break;
   case INLINE_HM:
   case HEX_HM:
   case DECIMAL_HM:
-    fprintf(f, "ub4 phash(val)\n");
-    fprintf(f, "ub4 val;\n");
+    fprintf(f, "uint32_t phash(val)\n");
+    fprintf(f, "uint32_t val;\n");
     break;
   case AB_HM:
   case ABDEC_HM:
-    fprintf(f, "ub4 phash(a,b)\n");
-    fprintf(f, "ub4 a;\n");
-    fprintf(f, "ub4 b;\n");
+    fprintf(f, "uint32_t phash(a,b)\n");
+    fprintf(f, "uint32_t a;\n");
+    fprintf(f, "uint32_t b;\n");
     break;
   }
   fprintf(f, "{\n");
