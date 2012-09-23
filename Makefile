@@ -28,14 +28,14 @@ phash.h : perfect
 
 # DEPENDENCIES
 
-lookupa.o  : lookupa.c standard.h lookupa.h
+lookupa.o  : lookupa.c lookupa.h
 
-recycle.o  : recycle.c standard.h recycle.h
+recycle.o  : recycle.c recycle.h
 
-phash.o    : phash.c standard.h phash.h lookupa.h
+phash.o    : phash.c phash.h lookupa.h
 
-testperf.o : testperf.c standard.h recycle.h phash.h
+testperf.o : testperf.c recycle.h phash.h
 
-perfhex.o : perfhex.c standard.h lookupa.h recycle.h perfect.h
+perfhex.o : perfhex.c lookupa.h recycle.h perfect.h
 
-perfect.o : perfect.c standard.h lookupa.h recycle.h perfect.h
+perfect.o : perfect.c lookupa.h recycle.h perfect.h
