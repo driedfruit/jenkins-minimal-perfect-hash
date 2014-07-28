@@ -1,0 +1,11 @@
+*~
+lookupa.o
+perfect
+perfect.o
+perfhex.o
+recycle.o
+test
+test_hash.c
+test_hash.h
+test_hash.o
+testperf.o
