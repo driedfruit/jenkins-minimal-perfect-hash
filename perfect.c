@@ -50,7 +50,9 @@ determined a perfect hash for the whole set of keys.
 #include "recycle.h"
 #include "perfect.h"
 
+#ifndef _MSC_VER
 #include "inttypes.h" /* For PRI format specifiers */
+#endif
 #include "stdio.h"    /* For FILE, fopen() */
 #include "stdlib.h"   /* For exit(), EXIT_SUCCESS */
 #include "string.h"   /* For strlen(), memset() */
