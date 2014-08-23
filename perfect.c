@@ -1139,7 +1139,7 @@ hashform *form;                                           /* user directives */
     else 
     {
       for (i=0; i<blen; i+=16)
-	fprintf(f, "%" PRIx32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",\n",
+	fprintf(f, "%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",\n",
 		tab[i+0].val_b, tab[i+1].val_b, 
 		tab[i+2].val_b, tab[i+3].val_b, 
 		tab[i+4].val_b, tab[i+5].val_b, 
