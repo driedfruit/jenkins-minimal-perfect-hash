@@ -223,8 +223,8 @@ hashform *form;
     sprintf(final->line[2],
 	    "  checksum(key, len, state);\n");
     sprintf(final->line[3], 
-	    "  rsl = ((state[0]&0x%x)^scramble[tab[state[1]&0x%x]]);\n",
-	    alen-1, blen-1);
+	    "  rsl = ((state[0]&0x%x)^scramble[mph_%s_tab[state[1]&0x%x]]);\n",
+	    alen-1, form->low_name, blen-1);
   }
   else
   {
@@ -428,7 +428,7 @@ int     rollback;          /* FALSE applies augmenting path, TRUE rolls back */
       else if (tabh[hash].key_h)
       {
 	/* very rare: roll back any changes */
-	(void *)apply(tabb, tabh, tabq, blen, scramble, tail, TRUE);
+	(void)apply(tabb, tabh, tabq, blen, scramble, tail, TRUE);
 	return FALSE;                                  /* failure, collision */
       }
       tabh[hash].key_h = mykey;
@@ -676,11 +676,11 @@ hashform *form;                                           /* user directives */
   }
   else if (*blen < USE_SCRAMBLE)
   {
-    sprintf(final->line[0], "  uint32_t rsl = (a ^ tab[b]);\n");
+    sprintf(final->line[0], "  uint32_t rsl = (a ^ mph_%s_tab[b]);\n", form->low_name);
   }
   else
   {
-    sprintf(final->line[0], "  uint32_t rsl = (a ^ scramble[tab[b]]);\n");
+    sprintf(final->line[0], "  uint32_t rsl = (a ^ scramble[mph_%s_tab[b]]);\n", form->low_name);
   }
 
   printf("success, found a perfect hash\n");
