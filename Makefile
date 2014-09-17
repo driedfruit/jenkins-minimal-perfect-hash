@@ -17,7 +17,7 @@ test : $(O_TEST)
 
 clean:
 	rm ./*.o perfect test
-	
+
 # SAMPLE PHASH FILES
 
 test_hash.c : perfect

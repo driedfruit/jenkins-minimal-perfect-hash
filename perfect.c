@@ -50,7 +50,9 @@ determined a perfect hash for the whole set of keys.
 #include "recycle.h"
 #include "perfect.h"
 
+#ifndef _MSC_VER
 #include "inttypes.h" /* For PRI format specifiers */
+#endif
 #include "stdio.h"    /* For FILE, fopen() */
 #include "stdlib.h"   /* For exit(), EXIT_SUCCESS */
 #include "string.h"   /* For strlen(), memset() */
@@ -221,8 +223,8 @@ hashform *form;
     sprintf(final->line[2],
 	    "  checksum(key, len, state);\n");
     sprintf(final->line[3], 
-	    "  rsl = ((state[0]&0x%x)^scramble[tab[state[1]&0x%x]]);\n",
-	    alen-1, blen-1);
+	    "  rsl = ((state[0]&0x%x)^scramble[mph_%s_tab[state[1]&0x%x]]);\n",
+	    alen-1, form->low_name, blen-1);
   }
   else
   {
@@ -426,7 +428,7 @@ int     rollback;          /* FALSE applies augmenting path, TRUE rolls back */
       else if (tabh[hash].key_h)
       {
 	/* very rare: roll back any changes */
-	(void *)apply(tabb, tabh, tabq, blen, scramble, tail, TRUE);
+	(void)apply(tabb, tabh, tabq, blen, scramble, tail, TRUE);
 	return FALSE;                                  /* failure, collision */
       }
       tabh[hash].key_h = mykey;
@@ -674,11 +676,11 @@ hashform *form;                                           /* user directives */
   }
   else if (*blen < USE_SCRAMBLE)
   {
-    sprintf(final->line[0], "  uint32_t rsl = (a ^ tab[b]);\n");
+    sprintf(final->line[0], "  uint32_t rsl = (a ^ mph_%s_tab[b]);\n", form->low_name);
   }
   else
   {
-    sprintf(final->line[0], "  uint32_t rsl = (a ^ scramble[tab[b]]);\n");
+    sprintf(final->line[0], "  uint32_t rsl = (a ^ scramble[mph_%s_tab[b]]);\n", form->low_name);
   }
 
   printf("success, found a perfect hash\n");
@@ -1137,7 +1139,7 @@ hashform *form;                                           /* user directives */
     else 
     {
       for (i=0; i<blen; i+=16)
-	fprintf(f, "%" PRIx32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",\n",
+	fprintf(f, "%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",%" PRId32 ",\n",
 		tab[i+0].val_b, tab[i+1].val_b, 
 		tab[i+2].val_b, tab[i+3].val_b, 
 		tab[i+4].val_b, tab[i+5].val_b, 

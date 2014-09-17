@@ -16,7 +16,7 @@ This also decreases memory fragmentation, and freeing structures
 #include "recycle.h"
 
 #include "stdio.h"  /* for std* streams, fprintf() */
-#include "malloc.h" /* for free() */
+//#include "malloc.h" /* for free() */
 #include "string.h" /* for memset() */
 #include "stdlib.h" /* for exit(), EXIT_FAILURE */
 #include "stdint.h" /* for uint* types */
