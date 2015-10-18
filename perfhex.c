@@ -30,9 +30,7 @@ those pairs.
  * Find a perfect hash when there is only one key.  Zero instructions.
  * Hint: the one key always hashes to 0
  */
-static void hexone(keys, final)
-key     *keys;
-gencode *final;
+static void hexone(key *keys, gencode *final)
 {
   /* 1 key: the hash is always 0 */
   keys->a_k = 0;
@@ -48,9 +46,7 @@ gencode *final;
  * There exists a bit that is different for the two keys.  Test it.
  * Note that a perfect hash of 2 keys is automatically minimal.
  */
-static void hextwo(keys, final)
-key     *keys;
-gencode *final;
+static void hextwo(key *keys, gencode *final)
 {
   uint32_t a = keys->hash_k;
   uint32_t b = keys->next_k->hash_k;
@@ -86,10 +82,7 @@ gencode *final;
  * find the value to xor to a and b and c to make none of them 3 
  * assert, (a,b,c) are three distinct values in (0,1,2,3).
  */
-static uint32_t find_adder(a,b,c)
-uint32_t a;
-uint32_t b;
-uint32_t c;
+static uint32_t find_adder(uint32_t a, uint32_t b, uint32_t c)
 {
   return (a^b^c^3);
 }
@@ -108,10 +101,9 @@ uint32_t c;
  * A minimal perfect hash needs to xor one of 0,1,2,3 afterwards to cause
  * the hole to land on 3.  find_adder() finds that constant
  */
-static void hexthree(keys, final, form)
-key      *keys;
-gencode  *final;
-hashform *form;
+static void hexthree(key      *keys,
+                     gencode  *final,
+                     hashform *form)
 {
   uint32_t a = keys->hash_k;
   uint32_t b = keys->next_k->hash_k;
@@ -260,11 +252,7 @@ hashform *form;
  * Check that a,b,c,d are some permutation of 0,1,2,3
  * Assume that a,b,c,d are all have values less than 32.
  */
-static int testfour(a,b,c,d)
-uint32_t a;
-uint32_t b;
-uint32_t c;
-uint32_t d;
+static int testfour(uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
   uint32_t mask = (1<<a)^(1<<b)^(1<<c)^(1<<d);
   return (mask == 0xf);
@@ -276,9 +264,7 @@ uint32_t d;
  * Find a perfect hash when there are only four keys.  Max 10 instructions.
  * Note that a perfect hash for 4 keys will automatically be minimal.
  */
-static void hexfour(keys, final)
-key     *keys;
-gencode *final;
+static void hexfour(key *keys, gencode *final)
 {
   uint32_t a = keys->hash_k;
   uint32_t b = keys->next_k->hash_k;
@@ -820,9 +806,8 @@ gencode *final;
 
 
 /* test if a_k is distinct and in range for all keys */
-static int testeight(keys, badmask)
-key      *keys;                                         /* keys being hashed */
-uint8_t       badmask;                       /* used for minimal perfect hashing */
+static int testeight(key      *keys,     /* keys being hashed */
+                     uint8_t  badmask)   /* used for minimal perfect hashing */
 {
   uint8_t  mask = badmask;
   key *mykey;
@@ -843,11 +828,10 @@ uint8_t       badmask;                       /* used for minimal perfect hashing
  * We can't deterministically find a perfect hash, but there's a reasonable
  * chance we'll get lucky.  Give it a shot.  Return TRUE if we succeed.
  */
-static int hexeight(keys, nkeys, final, form)
-key      *keys;
-uint32_t       nkeys;
-gencode  *final;
-hashform *form;
+static int hexeight(key      *keys,
+                    uint32_t nkeys,
+                    gencode  *final,
+                    hashform *form)
 {
   key *mykey;                                       /* walk through the keys */
   uint32_t  i,j,k;
@@ -991,12 +975,11 @@ hashform *form;
  * final->i is the current state of the state machine.
  * final->j and final->k are counters in the loops the states simulate.
  */
-static void hexn(keys, salt, alen, blen, final)
-key     *keys;
-uint32_t      salt;
-uint32_t      alen;
-uint32_t      blen;
-gencode *final;
+static void hexn(key     *keys,
+                 uint32_t salt,
+                 uint32_t alen,
+                 uint32_t blen,
+                 gencode *final)
 {
   key *mykey;
   uint32_t  highbit = final->highbit;
@@ -1197,11 +1180,8 @@ gencode *final;
 }
 
 
-
 /* find the highest and lowest bit where any key differs */
-static void setlow(keys, final)
-key     *keys;
-gencode *final;
+static void setlow(key *keys, gencode *final)
 {
   uint32_t  lowbit;
   uint32_t  highbit;
@@ -1248,15 +1228,14 @@ gencode *final;
  * Return TRUE if we found a perfect hash and no more work is needed.
  * Return FALSE if we just did an initial hash and more work is needed.
  */
-int inithex(keys, nkeys, alen, blen, smax, salt, final, form)
-key      *keys;                                          /* list of all keys */
-uint32_t       nkeys;                                   /* number of keys to hash */
-uint32_t       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
-uint32_t       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
-uint32_t       smax;                   /* maximum range of computable hash values */
-uint32_t       salt;                     /* used to initialize the hash function */
-gencode  *final;                          /* output, code for the final hash */
-hashform *form;                                           /* user directives */
+int inithex(key      *keys,       /* list of all keys */
+            uint32_t nkeys,       /* number of keys to hash */
+            uint32_t alen,        /* (a,b) has a in 0..alen-1, a power of 2 */
+            uint32_t blen,        /* (a,b) has b in 0..blen-1, a power of 2 */
+            uint32_t smax,        /* maximum range of computable hash values */
+            uint32_t salt,        /* used to initialize the hash function */
+            gencode  *final,      /* output, code for the final hash */
+            hashform *form)       /* user directives */
 {
   setlow(keys, final);
 

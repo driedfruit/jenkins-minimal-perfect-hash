@@ -25,7 +25,7 @@ typedef unsigned __int64 uint64_t;
 #define hashsize(n) ((uint32_t)1<<(n))
 #define hashmask(n) (hashsize(n)-1)
 
-uint32_t lookup(/*_ uint8_t *k, uint32_t length, uint32_t level _*/);
-void checksum(/*_ uint8_t *k, uint32_t length, uint32_t *state _*/);
+uint32_t lookup(uint8_t *k, uint32_t length, uint32_t level);
+void checksum(uint8_t *k, uint32_t length, uint32_t *state);
 
 #endif /* LOOKUPA */

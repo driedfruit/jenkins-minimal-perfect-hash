@@ -56,6 +56,7 @@ determined a perfect hash for the whole set of keys.
 #include "stdio.h"    /* For FILE, fopen() */
 #include "stdlib.h"   /* For exit(), EXIT_SUCCESS */
 #include "string.h"   /* For strlen(), memset() */
+#include "ctype.h"    /* For tolower() */
 
 /*
 ------------------------------------------------------------------------------
@@ -64,8 +65,7 @@ Find the mapping that will produce a perfect hash
 */
 
 /* return the ceiling of the log (base 2) of val */
-uint32_t  mylog2(val)
-uint32_t  val;
+uint32_t  mylog2(uint32_t  val)
 {
   uint32_t i;
   for (i=0; ((uint32_t)1<<i) < val; ++i)
@@ -75,9 +75,8 @@ uint32_t  val;
 
 /* compute p(x), where p is a permutation of 0..(1<<nbits)-1 */
 /* permute(0)=0.  This is intended and useful. */
-static uint32_t  permute(x, nbits)
-uint32_t x;                                       /* input, a value in some range */
-uint32_t nbits;                                 /* input, number of bits in range */
+static uint32_t  permute(uint32_t x,     /* input, a value in some range */
+                         uint32_t nbits) /* input, number of bits in range */
 {
   int i;
   int mask   = ((uint32_t)1<<nbits)-1;                                /* all ones */
@@ -96,9 +95,8 @@ uint32_t nbits;                                 /* input, number of bits in rang
 }
 
 /* initialize scramble[] with distinct random values in 0..smax-1 */
-static void scrambleinit(scramble, smax)
-uint32_t      *scramble;                            /* hash is a^scramble[tab[b]] */
-uint32_t       smax;                    /* scramble values should be in 0..smax-1 */
+static void scrambleinit(uint32_t      *scramble,  /* hash is a^scramble[tab[b]] */
+                         uint32_t       smax)      /* scramble values should be in 0..smax-1 */
 {
   uint32_t i;
 
@@ -113,10 +111,9 @@ uint32_t       smax;                    /* scramble values should be in 0..smax-
  * Check if key1 and key2 are the same. 
  * We already checked (a,b) are the same.
  */
-static void checkdup(key1, key2, form)
-key      *key1;
-key      *key2;
-hashform *form;
+static void checkdup(key      *key1,
+                     key      *key2,
+                     hashform *form)
 {
   switch(form->hashtype)
   {
@@ -153,12 +150,11 @@ hashform *form;
  * put keys in tabb according to key->b_k
  * check if the initial hash might work 
  */
-static int inittab(tabb, blen, keys, form, complete)
-bstuff   *tabb;                     /* output, list of keys with b for (a,b) */
-uint32_t       blen;                                            /* length of tabb */
-key      *keys;                               /* list of keys already hashed */
-hashform *form;                                           /* user directives */
-int       complete;        /* TRUE means to complete init despite collisions */
+static int inittab(bstuff   *tabb,     /* output, list of keys with b for (a,b) */
+                   uint32_t  blen,     /* length of tabb */
+                   key      *keys,     /* list of keys already hashed */
+                   hashform *form,     /* user directives */
+                   int       complete) /* TRUE means to complete init despite collisions */
 {
   int  nocollision = TRUE;
   key *mykey;
@@ -193,14 +189,13 @@ int       complete;        /* TRUE means to complete init despite collisions */
 
 
 /* Do the initial hash for normal mode (use lookup and checksum) */
-static void initnorm(keys, alen, blen, smax, salt, final, form)
-key      *keys;                                          /* list of all keys */
-uint32_t       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
-uint32_t       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
-uint32_t       smax;                   /* maximum range of computable hash values */
-uint32_t       salt;                     /* used to initialize the hash function */
-gencode  *final;                          /* output, code for the final hash */
-hashform *form;
+static void initnorm(key      *keys,    /* list of all keys */
+                     uint32_t alen,     /* (a,b) has a in 0..alen-1, a power of 2 */
+                     uint32_t blen,     /* (a,b) has b in 0..blen-1, a power of 2 */
+                     uint32_t smax,     /* maximum range of computable hash values */
+                     uint32_t salt,     /* used to initialize the hash function */
+                     gencode  *final,   /* output, code for the final hash */
+                     hashform *form)
 {
   key *mykey;
   if (mylog2(alen)+mylog2(blen) > UINT32_BITS)
@@ -239,7 +234,7 @@ hashform *form;
     }
     final->used = 2;
     sprintf(final->line[0], 
-	    "  uint32_t rsl, val = lookup(key, len, 0x%" PRIx32 ");\n", initlev);
+	    "  uint32_t rsl, val = lookup((uint8_t*)key, len, 0x%" PRIx32 ");\n", initlev);
     if (smax <= 1)
     {
       sprintf(final->line[1], "  rsl = 0;\n");
@@ -264,14 +259,13 @@ hashform *form;
 
 
 /* Do initial hash for inline mode */
-static void initinl(keys, alen, blen, smax, salt, final, form)
-key      *keys;                                          /* list of all keys */
-uint32_t       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
-uint32_t       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
-uint32_t       smax;                           /* range of computable hash values */
-uint32_t       salt;                     /* used to initialize the hash function */
-gencode  *final;                            /* generated code for final hash */
-hashform *form;                             /* user-provided options */
+static void initinl(key      *keys,   /* list of all keys */
+                    uint32_t alen,    /* (a,b) has a in 0..alen-1, a power of 2 */
+                    uint32_t blen,    /* (a,b) has b in 0..blen-1, a power of 2 */
+                    uint32_t smax,    /* range of computable hash values */
+                    uint32_t salt,    /* used to initialize the hash function */
+                    gencode  *final,  /* generated code for final hash */
+                    hashform *form)   /* user-provided options */
 {
   key *mykey;
   uint32_t  amask = alen-1;
@@ -316,16 +310,15 @@ hashform *form;                             /* user-provided options */
  *   1: found distinct (a,b) for all keys, put keys in tabb[]
  *   2: found a perfect hash, no need to do any more work
  */
-static uint32_t initkey(keys, nkeys, tabb, alen, blen, smax, salt, form, final)
-key      *keys;                                          /* list of all keys */
-uint32_t       nkeys;                                     /* total number of keys */
-bstuff   *tabb;                                        /* stuff indexed by b */
-uint32_t       alen;                    /* (a,b) has a in 0..alen-1, a power of 2 */
-uint32_t       blen;                    /* (a,b) has b in 0..blen-1, a power of 2 */
-uint32_t       smax;                           /* range of computable hash values */
-uint32_t       salt;                     /* used to initialize the hash function */
-hashform *form;                                           /* user directives */
-gencode  *final;                                      /* code for final hash */
+static uint32_t initkey(key      *keys,   /* list of all keys */
+                        uint32_t  nkeys,  /* total number of keys */
+                        bstuff   *tabb,   /* stuff indexed by b */
+                        uint32_t  alen,   /* (a,b) has a in 0..alen-1, a power of 2 */
+                        uint32_t  blen,   /* (a,b) has b in 0..blen-1, a power of 2 */
+                        uint32_t  smax,   /* range of computable hash values */
+                        uint32_t  salt,   /* used to initialize the hash function */
+                        hashform *form,   /* user directives */
+                        gencode  *final)  /* code for final hash */
 {
   uint32_t finished;
 
@@ -359,11 +352,10 @@ gencode  *final;                                      /* code for final hash */
 }
 
 /* Print an error message and exit if there are duplicates */
-static void duplicates(tabb, blen, keys, form)
-bstuff   *tabb;                    /* array of lists of keys with the same b */
-uint32_t       blen;                              /* length of tabb, a power of 2 */
-key      *keys;
-hashform *form;                                           /* user directives */
+static void duplicates(bstuff   *tabb,  /* array of lists of keys with the same b */
+                       uint32_t blen,   /* length of tabb, a power of 2 */
+                       key      *keys,
+                       hashform *form)  /* user directives */
 {
   uint32_t  i;
   key *key1;
@@ -380,14 +372,13 @@ hashform *form;                                           /* user directives */
 
 
 /* Try to apply an augmenting list */
-static int apply(tabb, tabh, tabq, blen, scramble, tail, rollback)
-bstuff *tabb;
-hstuff *tabh;
-qstuff *tabq;
-uint32_t     blen;
-uint32_t    *scramble;
-uint32_t     tail;
-int     rollback;          /* FALSE applies augmenting path, TRUE rolls back */
+static int apply(bstuff   *tabb,
+                 hstuff   *tabh,
+                 qstuff   *tabq,
+                 uint32_t  blen,
+                 uint32_t *scramble,
+                 uint32_t  tail,
+                 int       rollback) /* FALSE applies augmenting path, TRUE rolls back */
 {
   uint32_t     hash;
   key    *mykey;
@@ -457,18 +448,16 @@ an unused node is found.  Sum(i=1..n)(n/i) is about nlogn, so expect
 this approach to take about nlogn time to map all single-key b's.
 -------------------------------------------------------------------------------
 */
-static int augment(tabb, tabh, tabq, blen, scramble, smax, item, nkeys, 
-		   highwater, form)
-bstuff   *tabb;                                        /* stuff indexed by b */
-hstuff   *tabh;  /* which key is associated with which hash, indexed by hash */
-qstuff   *tabq;            /* queue of *b* values, this is the spanning tree */
-uint32_t       blen;                                            /* length of tabb */
-uint32_t      *scramble;                      /* final hash is a^scramble[tab[b]] */
-uint32_t       smax;                                 /* highest value in scramble */
-bstuff   *item;                           /* &tabb[b] for the b to be mapped */
-uint32_t       nkeys;                         /* final hash must be in 0..nkeys-1 */
-uint32_t       highwater;        /* a value higher than any now in tabb[].water_b */
-hashform *form;               /* TRUE if we should do a minimal perfect hash */
+static int augment(bstuff   *tabb,    /* stuff indexed by b */
+                   hstuff   *tabh,    /* which key is associated with which hash, indexed by hash */
+                   qstuff   *tabq,    /* queue of *b* values, this is the spanning tree */
+                   uint32_t  blen,    /* length of tabb */
+                   uint32_t *scramble,/* final hash is a^scramble[tab[b]] */
+                   uint32_t  smax,    /* highest value in scramble */
+                   bstuff   *item,    /* &tabb[b] for the b to be mapped */
+                   uint32_t  nkeys,   /* final hash must be in 0..nkeys-1 */
+                   uint32_t  highwater, /* a value higher than any now in tabb[].water_b */
+                   hashform *form)    /* if we should do a minimal perfect hash */
 {
   uint32_t  q;                      /* current position walking through the queue */
   uint32_t  tail;              /* tail of the queue.  0 is the head of the queue. */
@@ -542,15 +531,14 @@ hashform *form;               /* TRUE if we should do a minimal perfect hash */
 
 
 /* find a mapping that makes this a perfect hash */
-static int perfect(tabb, tabh, tabq, blen, smax, scramble, nkeys, form)
-bstuff   *tabb;
-hstuff   *tabh;
-qstuff   *tabq;
-uint32_t       blen;
-uint32_t       smax;
-uint32_t      *scramble;
-uint32_t       nkeys;
-hashform *form;
+static int perfect(bstuff   *tabb,
+                   hstuff   *tabh,
+                   qstuff   *tabq,
+                   uint32_t  blen,
+                   uint32_t  smax,
+                   uint32_t *scramble,
+                   uint32_t  nkeys,
+                   hashform *form)
 {
   uint32_t maxkeys;                           /* maximum number of keys for any b */
   uint32_t i, j;
@@ -585,18 +573,16 @@ hashform *form;
  * Simple case: user gave (a,b).  No more mixing, no guessing alen or blen. 
  * This assumes a,b reside in (key->a_k, key->b_k), and final->form == AB_HK.
  */
-static void hash_ab(tabb, alen, blen, salt, final, 
-	     scramble, smax, keys, nkeys, form)
-bstuff  **tabb;           /* output, tab[] of the perfect hash, length *blen */
-uint32_t      *alen;                 /* output, 0..alen-1 is range for a of (a,b) */
-uint32_t      *blen;                 /* output, 0..blen-1 is range for b of (a,b) */
-uint32_t      *salt;                         /* output, initializes initial hash */
-gencode  *final;                                      /* code for final hash */
-uint32_t      *scramble;                      /* input, hash = a^scramble[tab[b]] */
-uint32_t      *smax;                           /* input, scramble[i] in 0..smax-1 */
-key      *keys;                                       /* input, keys to hash */
-uint32_t       nkeys;                       /* input, number of keys being hashed */
-hashform *form;                                           /* user directives */
+static void hash_ab(bstuff  **tabb,     /* output, tab[] of the perfect hash, length *blen */
+                    uint32_t *alen,     /* output, 0..alen-1 is range for a of (a,b) */
+                    uint32_t *blen,     /* output, 0..blen-1 is range for b of (a,b) */
+                    uint32_t *salt,     /* output, initializes initial hash */
+                    gencode  *final,    /* code for final hash */
+                    uint32_t *scramble, /* input, hash = a^scramble[tab[b]] */
+                    uint32_t *smax,     /* input, scramble[i] in 0..smax-1 */
+                    key      *keys,     /* input, keys to hash */
+                    uint32_t nkeys,     /* input, number of keys being hashed */
+                    hashform *form)     /* user directives */
 {
   hstuff *tabh;
   qstuff *tabq;
@@ -691,12 +677,11 @@ hashform *form;                                           /* user directives */
 
 
 /* guess initial values for alen and blen */
-static void initalen(alen, blen, smax, nkeys, form)
-uint32_t      *alen;                                      /* output, initial alen */
-uint32_t      *blen;                                      /* output, initial blen */
-uint32_t      *smax;    /* input, power of two greater or equal to max hash value */
-uint32_t       nkeys;                              /* number of keys being hashed */
-hashform *form;                                           /* user directives */
+static void initalen(uint32_t *alen,  /* output, initial alen */
+                     uint32_t *blen,  /* output, initial blen */
+                     uint32_t *smax,  /* input, power of two greater or equal to max hash value */
+                     uint32_t  nkeys, /* number of keys being hashed */
+                     hashform *form)  /* user directives */
 {
   /*
    * Find initial *alen, *blen
@@ -824,25 +809,23 @@ hashform *form;                                           /* user directives */
 ** Return the successful initializer for the initial hash. 
 ** Return 0 if no perfect hash could be found.
 */
-void findhash(tabb, alen, blen, salt, final, 
-	      scramble, smax, keys, nkeys, form)
-bstuff  **tabb;           /* output, tab[] of the perfect hash, length *blen */
-uint32_t      *alen;                 /* output, 0..alen-1 is range for a of (a,b) */
-uint32_t      *blen;                 /* output, 0..blen-1 is range for b of (a,b) */
-uint32_t      *salt;                         /* output, initializes initial hash */
-gencode  *final;                                      /* code for final hash */
-uint32_t      *scramble;                      /* input, hash = a^scramble[tab[b]] */
-uint32_t      *smax;                           /* input, scramble[i] in 0..smax-1 */
-key      *keys;                                       /* input, keys to hash */
-uint32_t       nkeys;                       /* input, number of keys being hashed */
-hashform *form;                                           /* user directives */
+void findhash(bstuff  **tabb,     /* output, tab[] of the perfect hash, length *blen */
+              uint32_t *alen,     /* output, 0..alen-1 is range for a of (a,b) */
+              uint32_t *blen,     /* output, 0..blen-1 is range for b of (a,b) */
+              uint32_t *salt,     /* output, initializes initial hash */
+              gencode  *final,    /* code for final hash */
+              uint32_t *scramble, /* input, hash = a^scramble[tab[b]] */
+              uint32_t *smax,     /* input, scramble[i] in 0..smax-1 */
+              key      *keys,     /* input, keys to hash */
+              uint32_t  nkeys,    /* input, number of keys being hashed */
+              hashform *form)     /* user directives */
 {
-  uint32_t bad_initkey;                       /* how many times did initkey fail? */
-  uint32_t bad_perfect;                       /* how many times did perfect fail? */
+  uint32_t bad_initkey;                      /* how many times did initkey fail? */
+  uint32_t bad_perfect;                      /* how many times did perfect fail? */
   uint32_t trysalt;                        /* trial initializer for initial hash */
   uint32_t maxalen;
-  hstuff *tabh;                       /* table of keys indexed by hash value */
-  qstuff *tabq;    /* table of stuff indexed by queue value, used by augment */
+  hstuff  *tabh;                          /* table of keys indexed by hash value */
+  qstuff  *tabq;       /* table of stuff indexed by queue value, used by augment */
 
   /* The case of (A,B) supplied by the user is a special case */
   if (form->hashtype == AB_HT)
@@ -961,12 +944,11 @@ Input/output type routines
 */
 
 /* get the list of keys */
-static void getkeys(keys, nkeys, textroot, keyroot, form)
-key      **keys;                                         /* list of all keys */
-uint32_t       *nkeys;                                          /* number of keys */
-reroot    *textroot;                          /* get space to store key text */
-reroot    *keyroot;                                    /* get space for keys */
-hashform  *form;                                          /* user directives */
+static void getkeys(key      **keys,       /* list of all keys */
+                    uint32_t  *nkeys,      /* number of keys */
+                    reroot    *textroot,   /* get space to store key text */
+                    reroot    *keyroot,    /* get space for keys */
+                    hashform  *form)       /* user directives */
 {
   key  *mykey;
   char *mytext;
@@ -1006,12 +988,11 @@ hashform  *form;                                          /* user directives */
 }
 
 /* make the .h file */
-static void make_h(blen, smax, nkeys, salt, form)
-uint32_t  blen;
-uint32_t  smax;
-uint32_t  nkeys;
-uint32_t  salt;
-hashform *form;
+static void make_h(uint32_t  blen,
+                   uint32_t  smax,
+                   uint32_t  nkeys,
+                   uint32_t  salt,
+                   hashform *form)
 {
   FILE *f;
   char *filename;
@@ -1050,9 +1031,9 @@ hashform *form;
   fprintf(f, "#define MPH_%s_SALT 0x%.8" PRIx32 " /* internal, initialize normal hash */\n",
           form->high_name, salt*0x9e3779b9);
   fprintf(f, "\n");
-  fprintf(f, "uint32_t mph_%s_s();\n", form->low_name);
+  fprintf(f, "uint32_t mph_%s_s(char *key, uint32_t len);\n", form->low_name);
   fprintf(f, "\n");
-  fprintf(f, "#define mph_%s(key) mph_%s_s((key), strlen((key)))\n", form->low_name, form->low_name);
+  fprintf(f, "#define mph_%s(key) mph_%s_s((key), (uint32_t)strlen((key)))\n", form->low_name, form->low_name);
   fprintf(f, "\n");
   fprintf(f, "#endif  /* MPH_%s */\n", form->high_name);
   fprintf(f, "\n");
@@ -1060,13 +1041,12 @@ hashform *form;
 }
 
 /* make the .c file */
-static void make_c(tab, smax, blen, scramble, final, form)
-bstuff   *tab;                                         /* table indexed by b */
-uint32_t       smax;                                       /* range of scramble[] */
-uint32_t       blen;                                /* b in 0..blen-1, power of 2 */
-uint32_t      *scramble;                                    /* used in final hash */
-gencode  *final;                                  /* code for the final hash */
-hashform *form;                                           /* user directives */
+static void make_c(bstuff   *tab,           /* table indexed by b */
+                   uint32_t  smax,          /* range of scramble[] */
+                   uint32_t  blen,          /* b in 0..blen-1, power of 2 */
+                   uint32_t *scramble,      /* used in final hash */
+                   gencode  *final,         /* code for the final hash */
+                   hashform *form)          /* user directives */
 {
   uint32_t   i;
   FILE *f;
@@ -1156,21 +1136,16 @@ hashform *form;                                           /* user directives */
   switch(form->mode)
   {
   case NORMAL_HM:
-    fprintf(f, "uint32_t mph_%s_s(key, len)\n", form->low_name);
-    fprintf(f, "char *key;\n");
-    fprintf(f, "int   len;\n");
+    fprintf(f, "uint32_t mph_%s_s(char *key, uint32_t len)\n", form->low_name);
     break;
   case INLINE_HM:
   case HEX_HM:
   case DECIMAL_HM:
-    fprintf(f, "uint32_t mph_%s_s(val)\n", form->low_name);
-    fprintf(f, "uint32_t val;\n");
+    fprintf(f, "uint32_t mph_%s_s(uint32_t val)\n", form->low_name);
     break;
   case AB_HM:
   case ABDEC_HM:
-    fprintf(f, "uint32_t mph_%s_s(a,b)\n", form->low_name);
-    fprintf(f, "uint32_t a;\n");
-    fprintf(f, "uint32_t b;\n");
+    fprintf(f, "uint32_t mph_%s_s(uint32_t a, uint32_t b)\n", form->low_name);
     break;
   }
   fprintf(f, "{\n");
@@ -1187,21 +1162,20 @@ hashform *form;                                           /* user directives */
 Read in the keys, find the hash, and write the .c and .h files
 ------------------------------------------------------------------------------
 */
-static void driver(form)
-hashform *form;                                           /* user directives */
+static void driver(hashform *form)                        /* user directives */
 {
-  uint32_t       nkeys;                                         /* number of keys */
+  uint32_t  nkeys;                                         /* number of keys */
   key      *keys;                                    /* head of list of keys */
   bstuff   *tab;                                       /* table indexed by b */
-  uint32_t       smax;            /* scramble[] values in 0..smax-1, a power of 2 */
-  uint32_t       alen;                            /* a in 0..alen-1, a power of 2 */
-  uint32_t       blen;                            /* b in 0..blen-1, a power of 2 */
-  uint32_t       salt;                       /* a parameter to the hash function */
+  uint32_t  smax;            /* scramble[] values in 0..smax-1, a power of 2 */
+  uint32_t  alen;                            /* a in 0..alen-1, a power of 2 */
+  uint32_t  blen;                            /* b in 0..blen-1, a power of 2 */
+  uint32_t  salt;                        /* a parameter to the hash function */
   reroot   *textroot;                      /* MAXKEYLEN-character text lines */
   reroot   *keyroot;                                       /* source of keys */
   gencode   final;                                    /* code for final hash */
-  uint32_t       i;
-  uint32_t       scramble[SCRAMBLE_LEN];           /* used in final hash function */
+  uint32_t  i;
+  uint32_t  scramble[SCRAMBLE_LEN];           /* used in final hash function */
   char      buf[10][80];                        /* buffer for generated code */
   char     *buf2[10];                             /* also for generated code */
 
@@ -1278,9 +1252,7 @@ static void usage_error()
 
 /* Interpret arguments and call the driver */
 /* See usage_error for the expected arguments */
-int main(argc, argv)
-int    argc;
-char **argv;
+int main(int argc, char **argv)
 {
   int      mode_given = FALSE;
   int      minimal_given = FALSE;
