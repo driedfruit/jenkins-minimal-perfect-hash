@@ -32,7 +32,7 @@ reroot *remkroot(size_t  size)
    return r;
 }
 
-void  refree(struct reroot *r)
+void refree(struct reroot *r)
 {
    recycle *temp;
    if ((temp = r->list)) while (r->list)
@@ -46,7 +46,7 @@ void  refree(struct reroot *r)
 }
 
 /* to be called from the macro renew only */
-char  *renewx(struct reroot *r)
+char *renewx(struct reroot *r)
 {
    recycle *temp;
    if (r->trash)
@@ -69,8 +69,8 @@ char  *renewx(struct reroot *r)
    return (char *)temp;
 }
 
-char   *remalloc(size_t  len,
-                 char   *purpose)
+char *remalloc(size_t  len,
+               char   *purpose)
 {
   char *x = (char *)malloc(len);
   if (!x)
