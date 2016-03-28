@@ -16,13 +16,12 @@ This also decreases memory fragmentation, and freeing structures
 #include "recycle.h"
 
 #include "stdio.h"  /* for std* streams, fprintf() */
-//#include "malloc.h" /* for free() */
+/*#include "malloc.h"*/ /* for free() */
 #include "string.h" /* for memset() */
 #include "stdlib.h" /* for exit(), EXIT_FAILURE */
 #include "stdint.h" /* for uint* types */
 
-reroot *remkroot(size)
-size_t  size;
+reroot *remkroot(size_t  size)
 {
    reroot *r = (reroot *)remalloc(sizeof(reroot), "recycle.c, root");
    r->list = (recycle *)0;
@@ -33,11 +32,10 @@ size_t  size;
    return r;
 }
 
-void  refree(r)
-struct reroot *r;
+void  refree(struct reroot *r)
 {
    recycle *temp;
-   if (temp = r->list) while (r->list)
+   if ((temp = r->list)) while (r->list)
    {
       temp = r->list->next;
       free((char *)r->list);
@@ -48,8 +46,7 @@ struct reroot *r;
 }
 
 /* to be called from the macro renew only */
-char  *renewx(r)
-struct reroot *r;
+char  *renewx(struct reroot *r)
 {
    recycle *temp;
    if (r->trash)
@@ -72,14 +69,13 @@ struct reroot *r;
    return (char *)temp;
 }
 
-char   *remalloc(len, purpose)
-size_t  len;
-char   *purpose;
+char   *remalloc(size_t  len,
+                 char   *purpose)
 {
   char *x = (char *)malloc(len);
   if (!x)
   {
-    fprintf(stderr, "malloc of %d failed for %s\n", 
+    fprintf(stderr, "malloc of %ld failed for %s\n", 
 	    len, purpose);
     exit(EXIT_FAILURE);
   }

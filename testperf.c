@@ -35,18 +35,17 @@ typedef  struct hashform  hashform;
 #define MAXKEYLEN  30
 struct key
 {
-  char *kname;
-  uint32_t   klen;
+  uint8_t    *kname;
+  uint32_t    klen;
   struct key *knext;
 };
 typedef  struct key  key;
 
 /* get the list of keys */
-static void getkeys(keys, nkeys, textroot, keyroot)
-key    **keys;        /* list of all keys */
-uint32_t     *nkeys;       /* number of keys */
-reroot  *textroot;    /* get space to store key text */
-reroot  *keyroot;     /* get space for keys */
+static void getkeys(key      **keys,       /* list of all keys */
+                    uint32_t *nkeys,       /* number of keys */
+                    reroot   *textroot,    /* get space to store key text */
+                    reroot   *keyroot)     /* get space for keys */
 {
   key  *mykey;
   char *mytext;
@@ -73,10 +72,9 @@ reroot  *keyroot;     /* get space for keys */
 Read in the keys, find the hash, and write the .c and .h files
 ------------------------------------------------------------------------------
 */
-void driver(form)
-hashform *form;
+void driver(hashform *form)
 {
-  uint32_t     nkeys;      /* number of keys */
+  uint32_t nkeys;      /* number of keys */
   key    *keys;       /* head of list of keys */
   key    *mykey;
   reroot *textroot;   /* MAXKEYLEN-character text lines */
@@ -99,7 +97,7 @@ hashform *form;
     switch(form->mode)
     {
     case NORMAL_HM:
-      hash = mph_test_s(mykey->kname, mykey->klen);  
+      hash = mph_test_s((char*)mykey->kname, mykey->klen);
       break;
     case INLINE_HM:
       hash = MPH_TEST_SALT;
@@ -107,23 +105,23 @@ hashform *form;
       {
 	hash = (mykey->kname[i] ^ hash) + ((hash<<26)+(hash>>6));
       }
-      hash = mph_test_s(hash);
+      hash = mph_test_s((char*)hash, mykey->klen);
       break;
     case HEX_HM:
-      sscanf(mykey->kname, "%" SCNx32 " ", &hash);
-      hash = mph_test_s(hash);
+      sscanf((char*)mykey->kname, "%" SCNx32 " ", &hash);
+      hash = mph_test((char*)hash);
       break;
     case DECIMAL_HM:
-      sscanf(mykey->kname, "%" SCNd32 " ", &hash);
-      hash = mph_test_s(hash);
+      sscanf((char*)mykey->kname, "%" SCNd32 " ", &hash);
+      hash = mph_test((char*)hash);
       break;
     case AB_HM:
-      sscanf(mykey->kname, "%" SCNx32 " %" SCNx32 " ", &a, &b);
-      hash = mph_test_s(a,b);
+      sscanf((char*)mykey->kname, "%" SCNx32 " %" SCNx32 " ", &a, &b);
+      hash = mph_test_s((char*)a,b);
       break;
     case ABDEC_HM:
-      sscanf(mykey->kname, "%" SCNd32 " %" SCNd32 " ", &a, &b);
-      hash = mph_test_s(a,b);
+      sscanf((char*)mykey->kname, "%" SCNd32 " %" SCNd32 " ", &a, &b);
+      hash = mph_test_s((char*)a,b);
       break;
     }
     printf("%8d  %.*s\n", hash, mykey->klen, mykey->kname);
@@ -141,9 +139,7 @@ void usage_error()
   exit(EXIT_FAILURE);
 }
 
-int main(argc, argv)
-int    argc;
-char **argv;
+int main(int argc, char **argv)
 {
   hashform  form;
   char     *c;
