@@ -18,8 +18,6 @@ By Bob Jenkins.  Public Domain.
 #define FALSE 0
 #endif
 
-#define MPH_FUNC_S(key, len) mph_test_s((key), (len))
-
 /* user directives: perfect hash? minimal perfect hash? input is an int? */
 struct hashform
 {
@@ -34,7 +32,7 @@ struct hashform
 };
 typedef  struct hashform  hashform;
 
-#define MAXKEYLEN  32
+#define MAXKEYLEN  30
 struct key
 {
   uint8_t    *kname;
@@ -47,20 +45,19 @@ typedef  struct key  key;
 static void getkeys(key      **keys,       /* list of all keys */
                     uint32_t *nkeys,       /* number of keys */
                     reroot   *textroot,    /* get space to store key text */
-                    reroot   *keyroot,     /* get space for keys */
-                    FILE     *input)       /* from stdin or file */
+                    reroot   *keyroot)     /* get space for keys */
 {
   key  *mykey;
   char *mytext;
-  mytext = renew(textroot);
+  mytext = (char *)renew(textroot);
   *keys  = (key *)0;
-  *nkeys = 0;
-  while (fgets(mytext, MAXKEYLEN, input))
+  *nkeys = (uint32_t)0;
+  while (fgets(mytext, MAXKEYLEN, stdin))
   {
     uint32_t i;
     mykey = (key *)renew(keyroot);
     mykey->kname = (uint8_t *)mytext;
-    mytext = renew(textroot);
+    mytext = (char *)renew(textroot);
     mykey->klen  = (uint32_t)(strlen((char *)mykey->kname)-1);
     mykey->knext = *keys;
     *keys = mykey;
@@ -75,7 +72,7 @@ static void getkeys(key      **keys,       /* list of all keys */
 Read in the keys, find the hash, and write the .c and .h files
 ------------------------------------------------------------------------------
 */
-void driver(hashform *form, FILE *input)
+void driver(hashform *form)
 {
   uint32_t nkeys;      /* number of keys */
   key    *keys;       /* head of list of keys */
@@ -88,7 +85,7 @@ void driver(hashform *form, FILE *input)
   keyroot  = remkroot(sizeof(key));
 
   /* read in the list of keywords */
-  getkeys(&keys, &nkeys, textroot, keyroot, input);
+  getkeys(&keys, &nkeys, textroot, keyroot);
   printf("Read in %" PRId32 " keys\n", nkeys);
 
   for (mykey=keys; mykey; mykey=mykey->knext)
@@ -100,7 +97,7 @@ void driver(hashform *form, FILE *input)
     switch(form->mode)
     {
     case NORMAL_HM:
-      hash = MPH_FUNC_S((char*)mykey->kname, mykey->klen);
+      hash = mph_test_s((char*)mykey->kname, mykey->klen);
       break;
     case INLINE_HM:
       hash = MPH_TEST_SALT;
@@ -108,23 +105,23 @@ void driver(hashform *form, FILE *input)
       {
 	hash = (mykey->kname[i] ^ hash) + ((hash<<26)+(hash>>6));
       }
-      hash = MPH_FUNC_S((char*)hash, mykey->klen);
+      hash = mph_test_s((char*)hash, mykey->klen);
       break;
     case HEX_HM:
       sscanf((char*)mykey->kname, "%" SCNx32 " ", &hash);
-      hash = MPH_FUNC_S((char*)hash, sizeof(hash));
+      hash = mph_test((char*)hash);
       break;
     case DECIMAL_HM:
       sscanf((char*)mykey->kname, "%" SCNd32 " ", &hash);
-      hash = MPH_FUNC_S((char*)hash, sizeof(hash));
+      hash = mph_test((char*)hash);
       break;
     case AB_HM:
       sscanf((char*)mykey->kname, "%" SCNx32 " %" SCNx32 " ", &a, &b);
-      hash = MPH_FUNC_S((char*)a, b);
+      hash = mph_test_s((char*)a,b);
       break;
     case ABDEC_HM:
       sscanf((char*)mykey->kname, "%" SCNd32 " %" SCNd32 " ", &a, &b);
-      hash = MPH_FUNC_S((char*)a, b);
+      hash = mph_test_s((char*)a,b);
       break;
     }
     printf("%8d  %.*s\n", hash, mykey->klen, mykey->kname);
@@ -147,16 +144,20 @@ int main(int argc, char **argv)
   hashform  form;
   char     *c;
   int       mode_given = 0;
-  FILE     *input = stdin;
 
   form.mode = NORMAL_HM;
 
   /* let the user override the default behavior */
-  if (argc > 2)
-    input = fopen(argv[2], "r");
-  if (argc > 1) {
+  switch (argc)
+  {
+  case 1:
+    break;
+  case 2:
     if (argv[1][0] != '-')
+    {
       usage_error();
+      break;
+    }
     for (c = &argv[1][1]; *c != '\0'; ++c) switch(*c)
     {
     case 'n': case 'N':
@@ -192,7 +193,11 @@ int main(int argc, char **argv)
     default:
       usage_error();
     }
+    break;
+  default:
+    usage_error();
   }
-  driver(&form, input);
+
+  driver(&form);
   return 1;
 }
