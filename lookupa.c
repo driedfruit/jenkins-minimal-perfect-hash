@@ -74,10 +74,9 @@ acceptable.  Do NOT use for cryptographic purposes.
 --------------------------------------------------------------------
 */
 
-uint32_t lookup( k, length, level)
-register uint8_t *k;        /* the key */
-register uint32_t  length;   /* the length of the key */
-register uint32_t  level;    /* the previous hash, or an arbitrary value */
+uint32_t lookup( register uint8_t *k,       /* the key */
+                 register uint32_t  length, /* the length of the key */
+                 register uint32_t  level)  /* the previous hash, or an arbitrary value */
 {
    register uint32_t a,b,c,len;
 
@@ -158,10 +157,9 @@ Use to detect changes between revisions of documents, assuming nobody
 is trying to cause collisions.  Do NOT use for cryptography.
 --------------------------------------------------------------------
 */
-void  checksum( k, len, state)
-register uint8_t *k;
-register uint32_t  len;
-register uint32_t *state;
+void  checksum(register uint8_t *k,
+               register uint32_t  len,
+               register uint32_t *state)
 {
    register uint32_t a,b,c,d,e,f,g,h,length;
 

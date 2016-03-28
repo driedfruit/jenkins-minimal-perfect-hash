@@ -8,7 +8,8 @@ but it is also usable as is.
 Project aim:
 
 Update it to a modern form-factor (a git repo) to rise accessibility. Replace
-"standart.h" with real standart headers, merge Makefiles, write small man page, 
+"standard.h" with real standard headers, merge Makefiles, convert from K&C to ANSI-C,
+write small man page, 
 etc (Maybe rewrite the text below to be less personal, to allow easier tweaks).
 
 Dedicated to Public Domain.
