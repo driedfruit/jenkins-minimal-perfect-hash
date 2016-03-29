@@ -33,21 +33,21 @@ Here is my C code for minimal perfect hashing, plus a test case.
 
         links to source files were here, see git repository.
 
-The generator is run like so, _"perfect -nm < samperf.txt"_ , and it produces the
-C files [phash.h][21] and [phash.c][22]. The sanity test program, which uses
-the generated hash to hash all the original keys, is run like so, _"test -nm <
-samperf.txt"_.
+The generator is run like so, `perfect -nm < samperf.txt` , and it produces the
+C files `phash.h` and `phash.c`. The sanity test program, which uses
+the generated hash to hash all the original keys, is run like so,
+`test -nm < samperf.txt`
 
 ### Usage
 
 There are options (taken by both perfect and the sanity test):
 
-         perfect [-{NnIiHhDdAa}{MmPp}{FfSs}] < key.txt 
+    perfect [-{NnIiHhDdAa}{MmPp}{FfSs}] [PREFIX] < key.txt 
 
-Only one of NnIiHhAa may be specified. N is the default. These say how to
+Only one of `NnIiHhAa` may be specified. `N` is the default. These say how to
 interpret the keys. The input is always a list of keys, one key per line.
 
-N,n 
+N,n
 
 >	Normal mode, key is any string string (default). About 42+6n
 	instructions for an n-byte key, or a 119+7n instructions if there are more
@@ -127,7 +127,9 @@ B,b
 
 >	Same as A,a, except in decimal not hexidecimal.
 
-Only one of MmPp may be specified. M is the default. These say whether to do a
+#### Hashing toggle
+
+Only one of `MmPp` may be specified. `M` is the default. These say whether to do a
 minimal perfect hash or just a perfect hash.
 
 M,m
@@ -142,7 +144,9 @@ P,p
 	power of 2 greater or equal to the number of keys. The size of tab[] will
 	be 1..4 bits per key.
 
-Only one of FfSs may be specified. S is the default.
+#### Speed toggle
+
+Only one of `FfSs` may be specified. S is the default.
 
 F,f
 
@@ -158,6 +162,11 @@ S,s
 >	Slow mode. Take more time generating the perfect hash in hopes of making
 	tab[] as small as possible.
 
+#### Prefix
+
+For your convinience, you could specify a prefix, which would affect the names of the
+generated files and the structs within. This is useful if you're including `perfect` in
+your build process.
 
 ### Examples and Performance
 
@@ -168,26 +177,23 @@ random 4-byte numbers in hex. tab[] is always an array of 1-byte values.
 Normally I use a 166mhz machine with 32meg RAM, but a million keys died
 thrashing virtual memory on that.
 
-<b>
 
-	Usage 						keys 	sec.	tab[] 	size minimal?
-
-</b>
-
-	perfect < samperf.txt		58		0		64		yes
-	perfect -p < samperf.txt	58		0		32		no
-	perfect < ispell.txt		38470	11		16384	yes
-	perfect -p < ispell.txt		38470	4		4096	no
-	perfect < mill.txt			1000000	65		524288	yes
-	perfect -p < mill.txt		1000000	100		524288	no
+Usage                        | keys    | sec.  | tab[]  | size minimal?
+-----------------------------|---------|-------|--------|--------------
+perfect < samperf.txt        | 58      | 0     | 64     | yes
+perfect -p < samperf.txt     | 58      | 0     | 32     | no
+perfect < ispell.txt         | 38470   | 11    | 16384  | yes
+perfect -p < ispell.txt      | 38470   | 4     | 4096   | no
+perfect < mill.txt           | 1000000 | 65    | 524288 | yes
+perfect -p < mill.txt        | 1000000 | 100   | 524288 | no
 
 ### Algorithm
 
 #### Initial hash returns (A,B), final hash is A^tab[B]
 
-The perfect hash algorithm I use isn't a [Pearson hash][7]. My perfect hash
+The perfect hash algorithm I use isn't a [Pearson hash][27]. My perfect hash
 algorithm uses an initial hash to find a pair (A,B) for each keyword, then it
-generates a mapping table tab[] so that A^tab[B] (or A^scramble[tab[B]]) is
+generates a mapping table tab[] so that A^tab[B] \(or A^scramble[tab[B]]\) is
 unique for each keyword. tab[] is always a power of two. When tab[] has 4096
 or more entries, scramble[] is used and tab[] holds 1-byte values. scramble[]
 is always 256 values (2-byte or 4-byte values depending on the size of hash
@@ -363,27 +369,21 @@ operation for every character of the key.
 
 [Bob Jenkins' Web Site][33]
 
-   [8]: jenkins-perfect/blob/master/makeperf.txt
-   [9]: jenkins-perfect/blob/master/standard.h
-   [10]: jenkins-perfect/blob/master/recycle.h
-   [11]: jenkins-perfect/blob/master/recycle.c
-   [12]: jenkins-perfect/blob/master/lookupa.h
-   [13]: jenkins-perfect/blob/master/lookupa.c
-   [14]: jenkins-perfect/blob/master/perfect.h
-   [15]: jenkins-perfect/blob/master/perfect.c
-   [16]: jenkins-perfect/blob/master/perfhex.c
-   [17]: jenkins-perfect/blob/master/samperf.txt
-   [18]: jenkins-perfect/blob/master/samperf2.txt
-   [19]: jenkins-perfect/blob/master/testperf.c
-   [20]: jenkins-perfect/blob/master/makeptst.txt
-   [21]: jenkins-perfect/blob/master/phash.h
-   [22]: jenkins-perfect/blob/master/phash.c
+   [10]: recycle.h
+   [11]: recycle.c
+   [12]: lookupa.h
+   [13]: lookupa.c
+   [14]: perfect.h
+   [15]: perfect.c
+   [16]: perfhex.c
+   [17]: samperf.txt
+   [19]: testperf.c
    [23]: http://www.gnu.org/software/gperf/
    [24]: http://metalab.unc.edu/pub/Linux/devel/lang/c/!INDEX.short.html
-   [25]: http://www.dcc.uchile.cl/~oalonso/handbook/hbook.html
-   [26]: http://www.dcc.uchile.cl/~oalonso/handbook/algs/3/3316.ins.c.html
+   [25]: https://web.archive.org/web/19990423024845/http://www.dcc.uchile.cl/~oalonso/handbook/hbook.html
+   [26]: https://web.archive.org/web/19990423024845/http://www.dcc.uchile.cl/~oalonso/handbook/algs/3/3316.ins.c.html
    [27]: http://burtleburtle.net/bob/hash/pearson.html
-   [28]: http://sun.iinf.polsl.gliwice.pl/~zjc/
+   [28]: https://web.archive.org/web/20070824120032/http://sun.iinf.polsl.gliwice.pl/~zjc/
    [29]: http://burtleburtle.net/bob/hash/../rand/isaac.html
    [30]: http://burtleburtle.net/bob/hash/index.html#lookup
    [31]: http://burtleburtle.net/bob/hash/../scout/index.html
