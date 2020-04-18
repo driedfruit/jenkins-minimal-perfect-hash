@@ -54,7 +54,6 @@ static void getkeys(key      **keys,       /* list of all keys */
   *nkeys = (uint32_t)0;
   while (fgets(mytext, MAXKEYLEN, stdin))
   {
-    uint32_t i;
     mykey = (key *)renew(keyroot);
     mykey->kname = (uint8_t *)mytext;
     mytext = (char *)renew(textroot);
@@ -105,23 +104,23 @@ void driver(hashform *form)
       {
 	hash = (mykey->kname[i] ^ hash) + ((hash<<26)+(hash>>6));
       }
-      hash = mph_test_s((char*)hash, mykey->klen);
+      hash = mph_test_s((char*)(ptrdiff_t)hash, mykey->klen);
       break;
     case HEX_HM:
       sscanf((char*)mykey->kname, "%" SCNx32 " ", &hash);
-      hash = mph_test((char*)hash);
+      hash = mph_test((char*)(ptrdiff_t)hash);
       break;
     case DECIMAL_HM:
       sscanf((char*)mykey->kname, "%" SCNd32 " ", &hash);
-      hash = mph_test((char*)hash);
+      hash = mph_test((char*)(ptrdiff_t)hash);
       break;
     case AB_HM:
       sscanf((char*)mykey->kname, "%" SCNx32 " %" SCNx32 " ", &a, &b);
-      hash = mph_test_s((char*)a,b);
+      hash = mph_test_s((char*)(ptrdiff_t)a,b);
       break;
     case ABDEC_HM:
       sscanf((char*)mykey->kname, "%" SCNd32 " %" SCNd32 " ", &a, &b);
-      hash = mph_test_s((char*)a,b);
+      hash = mph_test_s((char*)(ptrdiff_t)a,b);
       break;
     }
     printf("%8d  %.*s\n", hash, mykey->klen, mykey->kname);
