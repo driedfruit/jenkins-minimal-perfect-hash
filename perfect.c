@@ -1031,9 +1031,23 @@ static void make_h(uint32_t  blen,
   fprintf(f, "#define MPH_%s_SALT 0x%.8" PRIx32 " /* internal, initialize normal hash */\n",
           form->high_name, salt*0x9e3779b9);
   fprintf(f, "\n");
-  fprintf(f, "uint32_t mph_%s_s(char *key, uint32_t len);\n", form->low_name);
-  fprintf(f, "\n");
-  fprintf(f, "#define mph_%s(key) mph_%s_s((key), (uint32_t)strlen((key)))\n", form->low_name, form->low_name);
+  switch(form->mode)
+  {
+  case NORMAL_HM:
+    fprintf(f, "uint32_t mph_%s_s(char *key, uint32_t len);\n", form->low_name);
+    fprintf(f, "\n");
+    fprintf(f, "#define mph_%s(key) mph_%s_s((key), (uint32_t)strlen((key)))\n", form->low_name, form->low_name);
+    break;
+  case INLINE_HM:
+  case HEX_HM:
+  case DECIMAL_HM:
+    fprintf(f, "uint32_t mph_%s_s(uint32_t val);\n", form->low_name);
+    break;
+  case AB_HM:
+  case ABDEC_HM:
+    fprintf(f, "uint32_t mph_%s_s(uint32_t a, uint32_t b);\n", form->low_name);
+    break;
+  }
   fprintf(f, "\n");
   fprintf(f, "#endif  /* MPH_%s */\n", form->high_name);
   fprintf(f, "\n");
