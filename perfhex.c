@@ -1273,11 +1273,11 @@ int inithex(key      *keys,       /* list of all keys */
       sprintf(final->line[6], "\n");
       if (blen < USE_SCRAMBLE)
       {                                                               /* hns */
-	sprintf(final->line[7], "  rsl = (a^tab[b]);\n");
+	sprintf(final->line[7], "  rsl = (a ^ mph_%s_tab[b]);\n", form->low_name);
       }
       else
       {                                                               /* hnt */
-	sprintf(final->line[7], "  rsl = (a^scramble[tab[b]]);\n");
+	sprintf(final->line[7], "  rsl = (a ^ scramble[mph_%s_tab[b]]);\n", form->low_name);
       }
     }
     hexn(keys, salt, alen, blen, final);
